@@ -1,0 +1,50 @@
+package:
+  name: lint-purs
+  description: A lint engine for PureScript source, with rules as ordinary values.
+  publish:
+    version: 0.1.0
+    license: MIT
+    location:
+      githubOwner: m-bock
+      githubRepo: purescript-lint
+  dependencies:
+    - aff
+    - arrays
+    - console
+    - effect
+    - either
+    - encode-decode
+    - language-cst-parser
+    - maybe
+    - node-buffer
+    - node-child-process
+    - node-fs
+    - node-glob-basic
+    - node-path
+    - prelude
+    - strings
+    - transformers
+    - tuples
+workspace:
+  packageSet:
+    registry: 66.9.0
+  extraPackages:
+    encode-decode:
+      git: https://github.com/m-bock/purescript-encode-decode.git
+      ref: f426660bd6d529e26a9877f3fcbf436be20a8734
+      dependencies:
+        - argonaut-core
+        - argonaut-codecs
+        - arrays
+        - contravariant
+        - either
+        - foldable-traversable
+        - foreign-object
+        - heterogeneous
+        - maybe
+        - ordered-collections
+        - prelude
+        - record
+        - transformers
+        - tuples
+        - typelevel-prelude

@@ -1,0 +1,24 @@
+{
+  "name": "purescript-encode-decode",
+  "version": "0.1.0",
+  "description": "Plain, explicit JSON encode/decode functions for PureScript - no typeclass-based decodeJson, no Codec machinery.",
+  "scripts": {
+    "test": "spago test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/m-bock/purescript-encode-decode.git"
+  },
+  "keywords": [],
+  "author": "Michael Bock",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/m-bock/purescript-encode-decode/issues"
+  },
+  "homepage": "https://github.com/m-bock/purescript-encode-decode#readme",
+  "devDependencies": {
+    "purescript": "^0.15.15",
+    "purs-tidy": "^0.11.0",
+    "spago": "^1.0.4"
+  }
+}
