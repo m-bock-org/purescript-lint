@@ -582,7 +582,7 @@
     "extra_packages": {
       "encode-decode": {
         "git": "https://github.com/m-bock/purescript-encode-decode.git",
-        "ref": "f426660bd6d529e26a9877f3fcbf436be20a8734",
+        "ref": "07a361b0e42314ee6521b8ccc774eca117be57d0",
         "dependencies": [
           "argonaut-codecs",
           "argonaut-core",
@@ -816,7 +816,7 @@
     "encode-decode": {
       "type": "git",
       "url": "https://github.com/m-bock/purescript-encode-decode.git",
-      "rev": "f426660bd6d529e26a9877f3fcbf436be20a8734",
+      "rev": "07a361b0e42314ee6521b8ccc774eca117be57d0",
       "dependencies": [
         "argonaut-codecs",
         "argonaut-core",

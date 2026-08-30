@@ -31,7 +31,7 @@ workspace:
   extraPackages:
     encode-decode:
       git: https://github.com/m-bock/purescript-encode-decode.git
-      ref: f426660bd6d529e26a9877f3fcbf436be20a8734
+      ref: 07a361b0e42314ee6521b8ccc774eca117be57d0
       dependencies:
         - argonaut-core
         - argonaut-codecs

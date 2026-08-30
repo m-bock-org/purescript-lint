@@ -10,7 +10,7 @@ import Data.Either (Either(..))
 import Data.Json.Decode
   ( DecodeJson
   , decodeAttempt
-  , decodeFromString
+  , runDecodeFromString
   , decodeObjectWithKey
   , decodeString
   , printJsonDecodeError
@@ -35,7 +35,7 @@ data SpagoPkg = PkgOther | PkgWorkspace SpagoWorkspacePackage
 spagoLsPackages :: Aff (Array SpagoPkg)
 spagoLsPackages = do
   raw <- runSpagoLsPackages
-  case decodeFromString (decodeObjectWithKey decodeSpagoPkg) raw of
+  case runDecodeFromString (decodeObjectWithKey decodeSpagoPkg) raw of
     Right obj -> pure (Obj.values obj)
     Left err -> Aff.throwError
       (Aff.error ("spago ls packages --json: " <> printJsonDecodeError err))
