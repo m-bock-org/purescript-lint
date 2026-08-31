@@ -24,6 +24,7 @@ data Rule
 -- | Lets `rule` accept a rule from any level without the caller saying
 -- | which level it is.
 class ToRule r where
+  -- | Put a rule of any level into a rule set.
   rule :: r -> Rule
 
 instance ToRule ModuleRule where

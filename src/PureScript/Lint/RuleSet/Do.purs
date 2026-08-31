@@ -12,9 +12,6 @@
 -- |   group "Declarations" Rules.do
 -- |     rule $ perDecl (maxFunctionArity 4)
 -- | ```
--- |
--- | Only `discard` is defined, so `x <- ...` does not typecheck. A rule
--- | set is a list, not a computation, and there is nothing to bind.
 module PureScript.Lint.RuleSet.Do
   ( discard
   , group
@@ -27,14 +24,14 @@ import Data.Array (singleton) as Array
 import PureScript.Lint.Internal.RuleSet (class ToRule, Rule)
 import PureScript.Lint.Internal.RuleSet (group, rule) as RuleSet
 
--- | What `Rules.do` desugars to: append each statement to the next.
+-- | Required for `Rules.do`.
 discard :: ∀ m. Semigroup m => m -> (Unit -> m) -> m
 discard x k = x <> k unit
 
--- | `PureScript.Lint.RuleSet.rule`, as a one-element block.
+-- | Put one rule into the set.
 rule :: ∀ r. ToRule r => r -> Array Rule
 rule = Array.singleton <<< RuleSet.rule
 
--- | `PureScript.Lint.RuleSet.group`, as a one-element block.
+-- | Name a section of the set.
 group :: String -> Array Rule -> Array Rule
 group name rules = Array.singleton (RuleSet.group name rules)

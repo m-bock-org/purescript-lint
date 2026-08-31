@@ -11,7 +11,10 @@ module PureScript.Lint.Internal.Rule
   , LintResult
   , ModuleLint
   , ModuleRule
+  , Finding
+  , RuleInfo
   , RuleOutcome
+  , ruleInfo
   , class HasExclude
   , class RuleLike
   , class RuleOptions
@@ -27,7 +30,6 @@ module PureScript.Lint.Internal.Rule
   , ruleExclude
   , runRules
   , skipWhen
-  , violation
   , violations
   , withHint
   ) where
@@ -46,16 +48,11 @@ import Data.String.Common (joinWith, split, trim) as Str
 import Node.Path (FilePath)
 import PureScript.CST.Types (Declaration, Expr, Module) as CST
 
--- | A rule's verdict. Opaque: build one with `violation`,
--- | `violations` or `fixed`.
+-- | A rule's verdict. Opaque: build one with `violations` or `fixed`.
 data LintResult a
   = Passed
   | Violations (NonEmptyArray String) (Maybe String)
   | Fixed a
-
--- | One finding.
-violation :: ∀ a. String -> LintResult a
-violation message = Violations (NEA.singleton message) Nothing
 
 -- | Every finding a rule made. No findings is how a rule passes, so
 -- | there is no separate `passed` to reach for - and a rule that
@@ -179,17 +176,25 @@ dedent raw =
 
 -- | Options common to a rule at any level.
 class RuleOptions r where
+  -- | Turn a rule off while leaving it in the set, so the line stays
+  -- | visible.
   disabled :: Boolean -> r -> r
 
 -- | Attaching exemptions, whose type depends on what the rule sees.
 class HasExclude r a | r -> a where
+  -- | Give a rule reasons to skip particular values.
   exclude :: Array (LintExemption a) -> r -> r
 
 -- | What the runner needs of a rule, whatever level it checks.
 class RuleLike r a | r -> a where
+  -- | Whether this rule was switched off.
   ruleDisabled :: r -> Boolean
+  -- | The reasons this rule skips particular values.
   ruleExclude :: r -> Array (LintExemption a)
+  -- | The check itself.
   ruleCheck :: r -> LintContext -> a -> LintResult a
+  -- | How the rule describes itself, for the report.
+  ruleInfo :: r -> RuleInfo
 
 -- | A module rule with its options applied.
 newtype ModuleRule = ModuleRule
@@ -213,6 +218,12 @@ instance RuleLike ModuleRule (CST.Module Void) where
   ruleDisabled (ModuleRule r) = r.disabled
   ruleExclude (ModuleRule r) = r.exclude
   ruleCheck (ModuleRule r) = r.rule.rule
+  ruleInfo (ModuleRule r) =
+    { name: r.rule.name
+    , description: r.rule.description
+    , goodExample: r.rule.goodExample
+    , badExample: r.rule.badExample
+    }
 
 -- | A declaration rule with its options applied.
 newtype DeclarationRule = DeclarationRule
@@ -236,6 +247,12 @@ instance RuleLike DeclarationRule (CST.Declaration Void) where
   ruleDisabled (DeclarationRule r) = r.disabled
   ruleExclude (DeclarationRule r) = r.exclude
   ruleCheck (DeclarationRule r) = r.rule.rule
+  ruleInfo (DeclarationRule r) =
+    { name: r.rule.name
+    , description: r.rule.description
+    , goodExample: r.rule.goodExample
+    , badExample: r.rule.badExample
+    }
 
 -- | An expression rule with its options applied.
 newtype ExprRule = ExprRule
@@ -260,10 +277,32 @@ instance RuleLike ExprRule (CST.Expr Void) where
   ruleDisabled (ExprRule r) = r.disabled
   ruleExclude (ExprRule r) = r.exclude
   ruleCheck (ExprRule r) = r.rule.rule
+  ruleInfo (ExprRule r) =
+    { name: r.rule.name
+    , description: r.rule.description
+    , goodExample: r.rule.goodExample
+    , badExample: r.rule.badExample
+    }
+
+-- | A rule's own description of itself, carried alongside anything it
+-- | finds so the report can say which rule spoke and what it wants.
+type RuleInfo =
+  { name :: String
+  , description :: String
+  , goodExample :: Maybe String
+  , badExample :: Maybe String
+  }
+
+-- | One thing a rule found, and which rule found it.
+type Finding =
+  { rule :: RuleInfo
+  , message :: String
+  , hint :: Maybe String
+  }
 
 -- | What running rules over one value produced: the value (rewritten if
 -- | any rule fixed it), whether that happened, and everything found.
-type RuleOutcome a = { result :: a, fixed :: Boolean, violations :: Array String }
+type RuleOutcome a = { result :: a, fixed :: Boolean, violations :: Array Finding }
 
 -- | Run every rule over one value, threading each rewrite into the next
 -- | rule's input.
@@ -276,10 +315,8 @@ runRules context rules initial =
           case skipWhen { exemptions: ruleExclude r, check: ruleCheck r } context acc.result of
             Passed -> acc
             Violations found hint -> acc
-              { violations = acc.violations <> map (withSuffix hint) (NEA.toArray found) }
+              { violations = acc.violations <> map (asFinding r hint) (NEA.toArray found) }
             Fixed result -> acc { result = result, fixed = true }
-    withSuffix hint msg = case hint of
-      Just h -> msg <> " (hint: " <> h <> ")"
-      Nothing -> msg
+    asFinding r hint message = { rule: ruleInfo r, message, hint }
   in
     Array.foldl applyOne { result: initial, fixed: false, violations: [] } rules

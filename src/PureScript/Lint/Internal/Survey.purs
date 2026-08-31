@@ -101,12 +101,16 @@ instance HasPageExclude WorkspaceRule where
 
 -- | Attaching exemptions to a survey rule.
 class HasPageExclude r where
+  -- | Give a survey rule reasons to ignore particular findings.
   excludePages :: Array PageExemption -> r -> r
 
 -- | What the runner needs of a survey rule, at either scope.
 class SurveyLike r s | r -> s where
+  -- | Whether this rule was switched off.
   surveyDisabled :: r -> Boolean
+  -- | The reasons this rule ignores particular findings.
   surveyExclude :: r -> Array PageExemption
+  -- | The check itself.
   surveyCheck :: r -> s -> Array SurveyFinding
 
 instance SurveyLike PackageRule PackageSurvey where

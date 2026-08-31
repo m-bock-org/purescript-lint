@@ -43,8 +43,6 @@ Configuration is an argument: `maxFunctionArity 4` is a rule, and
 filePath: src/PureScript/Lint/Internal/Rule.purs
 pick:
   - tag: signature
-    name: violation
-  - tag: signature
     name: violations
   - tag: signature
     name: fixed
@@ -53,7 +51,6 @@ pick:
 -->
 
 ```purescript
-violation :: ∀ a. String -> LintResult a
 violations :: ∀ a. Array String -> LintResult a
 fixed :: ∀ a. a -> LintResult a
 withHint :: ∀ a. String -> LintResult a -> LintResult a
@@ -61,19 +58,14 @@ withHint :: ∀ a. String -> LintResult a -> LintResult a
 
 <!-- PD_END -->
 
-A verdict is built with `violation` for one finding, `violations` for
-however many a rule found, or `fixed` with rewritten syntax. There is no
-`passed`: a rule passes by finding nothing, and `violations []` says so,
-so a rule that computes its findings needs no empty case. `withHint`
-attaches a suggestion to all of them.
+A verdict is `violations` with whatever a rule found, or `fixed` with
+rewritten syntax. A rule passes by finding nothing, so `violations []`
+is how it says so, and a rule that computes its findings hands them
+over as they come. `withHint` attaches a suggestion to all of them.
 
 `fixed` makes a rule auto-fixable, and the bar for it is that no
 judgment is left to a human - which most rules worth writing do not
 clear.
-
-You import the rules you want and put them in a list, so the compiler
-tracks them: an unused import is a compile error, and a renamed rule
-breaks the build at the call site.
 
 ## What a rule sees
 

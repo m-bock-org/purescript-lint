@@ -28,7 +28,6 @@ import PureScript.Lint.Internal.Rule
   , perDecl
   , perExpr
   , perModule
-  , violation
   , violations
   , withHint
   ) as Exports

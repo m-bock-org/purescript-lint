@@ -17,7 +17,6 @@ import PureScript.Lint.Internal.Rule
   , fixed
   , perModule
   , runRules
-  , violation
   , violations
   , withHint
   )
@@ -44,7 +43,7 @@ alwaysViolates =
   , description: "Always fails, so a test can see what the runner does with a violation."
   , goodExample: Nothing
   , badExample: Nothing
-  , rule: \_context _mod -> violation "nope"
+  , rule: \_context _mod -> violations [ "nope" ]
   }
 
 alwaysFixes :: ModuleLint
@@ -86,12 +85,17 @@ hinted =
 spec :: Spec Unit
 spec = describe "runRules" do
 
+  it "names the rule that made each finding" do
+    let
+      outcome = runRules context [ perModule alwaysViolates ] sampleModule
+    map (_.rule.name) outcome.violations `shouldEqual` [ "always-violates" ]
+
   it "collects a rule's violation" do
     let
       outcome = runRules context
         [ perModule alwaysViolates ]
         sampleModule
-    outcome.violations `shouldEqual` [ "nope" ]
+    map _.message outcome.violations `shouldEqual` [ "nope" ]
     outcome.fixed `shouldEqual` false
 
   it "reports nothing when no rule fires" do
@@ -103,7 +107,7 @@ spec = describe "runRules" do
       outcome = runRules context
         [ disabled true (perModule alwaysViolates) ]
         sampleModule
-    outcome.violations `shouldEqual` []
+    map _.message outcome.violations `shouldEqual` []
 
   it "skips a rule whose exemption applies" do
     let
@@ -112,7 +116,7 @@ spec = describe "runRules" do
             (perModule alwaysViolates)
         ]
         sampleModule
-    outcome.violations `shouldEqual` []
+    map _.message outcome.violations `shouldEqual` []
 
   it "runs a rule whose exemption does not apply" do
     let
@@ -121,7 +125,7 @@ spec = describe "runRules" do
             (perModule alwaysViolates)
         ]
         sampleModule
-    outcome.violations `shouldEqual` [ "nope" ]
+    map _.message outcome.violations `shouldEqual` [ "nope" ]
 
   it "marks the outcome fixed when a rule rewrites" do
     let
@@ -129,33 +133,34 @@ spec = describe "runRules" do
         [ perModule alwaysFixes ]
         sampleModule
     outcome.fixed `shouldEqual` true
-    outcome.violations `shouldEqual` []
+    map _.message outcome.violations `shouldEqual` []
 
   it "reports every finding a rule made, not just the first" do
     let
       outcome = runRules context
         [ perModule manyFindings ]
         sampleModule
-    outcome.violations `shouldEqual` [ "first", "second", "third" ]
+    map _.message outcome.violations `shouldEqual` [ "first", "second", "third" ]
 
   it "passes when a rule finds nothing" do
     let
       outcome = runRules context
         [ perModule findsNothing ]
         sampleModule
-    outcome.violations `shouldEqual` []
+    map _.message outcome.violations `shouldEqual` []
 
   it "attaches a hint to every finding, not just the first" do
     let
       outcome = runRules context
         [ perModule hinted ]
         sampleModule
-    outcome.violations `shouldEqual`
-      [ "first (hint: try harder)", "second (hint: try harder)" ]
+    map _.message outcome.violations `shouldEqual` [ "first", "second" ]
+    map _.hint outcome.violations `shouldEqual`
+      [ Just "try harder", Just "try harder" ]
 
   it "runs every rule, not just the first to fire" do
     let
       outcome = runRules context
         [ perModule alwaysViolates, perModule alwaysViolates ]
         sampleModule
-    outcome.violations `shouldEqual` [ "nope", "nope" ]
+    map _.message outcome.violations `shouldEqual` [ "nope", "nope" ]

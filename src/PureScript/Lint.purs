@@ -22,15 +22,30 @@ import PureScript.CST.Types
   , ModuleName(..)
   , Name(..)
   ) as CST
-import PureScript.Lint.Internal.Rule (ExprRule, LintContext, ModuleExemption, RuleOutcome, runRules)
+import PureScript.Lint.Internal.Rule
+  ( ExprRule
+  , Finding
+  , LintContext
+  , ModuleExemption
+  , RuleInfo
+  , RuleOutcome
+  , runRules
+  )
 import PureScript.Lint.Internal.RuleSet (FlatRules, Rule, flattenRules)
 import PureScript.Lint.Internal.Survey (PackageSurvey, SurveyModule, runSurveyRules)
 import PureScript.Lint.Internal.Workspace (Workspace, WorkspaceModule)
 import PureScript.Lint.Internal.Workspace as Workspace
 
+-- | Run a rule set over the Spago workspace in the current directory,
+-- | reporting what every rule found and returning the number of
+-- | findings - zero when the workspace is clean, which is what a caller
+-- | turns into an exit code.
+-- |
+-- | A rule that rewrites is applied: the module is written back.
 runLinter :: Array Rule -> Aff Int
 runLinter = runLinterWith { skipModules: [] }
 
+-- | `runLinter` with options.
 runLinterWith :: LintOptions -> Array Rule -> Aff Int
 runLinterWith { skipModules } rules = do
   workspace <- Workspace.getWorkspace
@@ -42,9 +57,15 @@ runLinterWith { skipModules } rules = do
   scanned <- for workspace.packages \pkg -> do
     perModule <- for pkg.modules (lintModule configured pkg.name)
     let survey = { packageName: pkg.name, packagePath: pkg.path, modules: map _.surveyed perModule }
-    pure { survey, violations: sum (map _.violations perModule) }
+    pure
+      { survey
+      , violations: sum (map _.violations perModule)
+      , fired: Array.concatMap _.fired perModule
+      }
   surveyed <- reportSurvey configured (map _.survey scanned)
   let total = sum (map _.violations scanned) + surveyed
+  printRulesThatFired (Array.concatMap _.fired scanned)
+  log ""
   log ("Linter: " <> show total <> " violation(s)")
   pure total
 
@@ -74,7 +95,34 @@ type Configured =
   , flatRules :: FlatRules
   }
 
-type ModuleScan = { surveyed :: SurveyModule, violations :: Int }
+type ModuleScan =
+  { surveyed :: SurveyModule, violations :: Int, fired :: Array RuleInfo }
+
+-- | One finding on one line: what is wrong, then which rule says so.
+printFinding :: Finding -> String
+printFinding { rule, message, hint } = fold
+  [ message
+  , case hint of
+      Just h -> " (hint: " <> h <> ")"
+      Nothing -> ""
+  , "  [" <> rule.name <> "]"
+  ]
+
+-- | Every rule that fired, explaining itself once rather than once per
+-- | finding - the description and examples are about the rule, and
+-- | repeating them for each line they matched buries the findings.
+printRulesThatFired :: Array RuleInfo -> Aff Unit
+printRulesThatFired fired =
+  let
+    distinct = Array.nubBy (\a b -> compare a.name b.name) fired
+  in
+    unless (Array.null distinct) do
+      log ""
+      for_ distinct \r -> do
+        log ("  " <> r.name)
+        log ("    " <> r.description)
+        for_ r.goodExample \e -> log ("    good: " <> e)
+        for_ r.badExample \e -> log ("    bad:  " <> e)
 
 lintModule :: Configured -> String -> WorkspaceModule -> Aff ModuleScan
 lintModule { skipModules, flatRules } packageName workspaceModule = do
@@ -91,7 +139,7 @@ lintModule { skipModules, flatRules } packageName workspaceModule = do
     surveyed =
       { moduleName: context.moduleName, path: context.path, kind: context.kind }
   if Array.any (\g -> g.appliesTo context) skipModules then
-    pure { surveyed, violations: 0 }
+    pure { surveyed, violations: 0, fired: [] }
   else do
     let
       afterModules = runRules context flatRules.modules original
@@ -102,9 +150,9 @@ lintModule { skipModules, flatRules } packageName workspaceModule = do
       violations = afterModules.violations <> afterDeclarations.violations <>
         afterExpressions.violations
       fixed = afterModules.fixed || afterDeclarations.fixed || afterExpressions.fixed
-    for_ violations \msg -> log ("  " <> workspaceModule.path <> ": " <> msg)
+    for_ violations \f -> log (fold [ "  ", workspaceModule.path, ": ", printFinding f ])
     when fixed (Workspace.writeModule workspaceModule.path afterExpressions.result)
-    pure { surveyed, violations: Array.length violations }
+    pure { surveyed, violations: Array.length violations, fired: map _.rule violations }
 
 type PerDeclaration =
   LintContext -> CST.Declaration Void -> RuleOutcome (CST.Declaration Void)
@@ -134,7 +182,7 @@ rewriteDecls context (CST.Module moduleFields) perDeclaration =
     , violations: Array.concatMap _.violations declResults
     }
 
-type ExprLintState = { violations :: Array String, fixed :: Boolean }
+type ExprLintState = { violations :: Array Finding, fixed :: Boolean }
 
 lintExprsInDecl :: Array ExprRule -> LintContext -> CST.Declaration Void -> RuleOutcome (CST.Declaration Void)
 lintExprsInDecl exprRules context decl =
