@@ -1,0 +1,130 @@
+module Test.Lint.RunRulesSpec (spec) where
+
+import Prelude
+
+import Data.Array (length) as Array
+import Data.Maybe (Maybe(..))
+import Partial.Unsafe (unsafeCrashWith)
+import PureScript.CST (RecoveredParserResult(..), parseModule)
+import PureScript.CST.Types (Module) as CST
+import PureScript.Lint.Rule
+  ( LintContext
+  , LintResult(..)
+  , ModuleLint
+  , ModuleRule
+  , RuleAlias(..)
+  , RuleName(..)
+  , disabled
+  , exclude
+  , name
+  , perModule
+  , runRules
+  )
+import PureScript.Lint.Workspace (ModuleKind(..))
+import Test.Spec (Spec, describe, it)
+import Test.Spec.Assertions (shouldEqual)
+
+-- | Private. Used only by `spec`.
+sampleModule :: CST.Module Void
+sampleModule = case parseModule "module Sample where\n\nvalue :: Int\nvalue = 1\n" of
+  ParseSucceeded m -> m
+  _ -> unsafeCrashWith "RunRulesSpec fixture: sample module does not parse"
+
+-- | Private. Used only by `spec`.
+context :: LintContext
+context =
+  { packageName: "sample-pkg"
+  , moduleName: "Sample"
+  , declarationName: Nothing
+  , path: "src/Sample.purs"
+  , kind: SourceModule
+  }
+
+-- | Private. Used only by `spec`.
+alwaysViolates :: ModuleLint
+alwaysViolates =
+  { name: RuleName "always-violates"
+  , description: "Always fails, so a test can see what the runner does with a violation."
+  , goodExample: Nothing
+  , badExample: Nothing
+  , rule: \_context _mod -> Violation "nope"
+  }
+
+-- | Private. Used only by `spec`.
+alwaysFixes :: ModuleLint
+alwaysFixes =
+  { name: RuleName "always-fixes"
+  , description: "Always reports a fix, without actually changing anything."
+  , goodExample: Nothing
+  , badExample: Nothing
+  , rule: \_context mod -> Fixed mod
+  }
+
+spec :: Spec Unit
+spec = describe "runRules" do
+
+  it "collects a rule's violation" do
+    let
+      outcome = runRules { excludeRules: [], context }
+        [ perModule alwaysViolates ]
+        sampleModule
+    outcome.violations `shouldEqual` [ "nope" ]
+    outcome.fixed `shouldEqual` false
+
+  it "reports nothing when no rule fires" do
+    let outcome = runRules { excludeRules: [], context } ([] :: Array ModuleRule) sampleModule
+    Array.length outcome.violations `shouldEqual` 0
+
+  it "skips a disabled rule" do
+    let
+      outcome = runRules { excludeRules: [], context }
+        [ disabled true (perModule alwaysViolates) ]
+        sampleModule
+    outcome.violations `shouldEqual` []
+
+  it "skips a rule whose alias is excluded" do
+    let
+      outcome = runRules { excludeRules: [ RuleAlias "skip-me" ], context }
+        [ name (RuleAlias "skip-me") (perModule alwaysViolates) ]
+        sampleModule
+    outcome.violations `shouldEqual` []
+
+  it "runs a named rule that was not excluded" do
+    let
+      outcome = runRules { excludeRules: [ RuleAlias "other" ], context }
+        [ name (RuleAlias "skip-me") (perModule alwaysViolates) ]
+        sampleModule
+    outcome.violations `shouldEqual` [ "nope" ]
+
+  it "skips a rule whose exemption applies" do
+    let
+      outcome = runRules { excludeRules: [], context }
+        [ exclude [ { name: "by design", appliesTo: \_ _ -> true } ]
+            (perModule alwaysViolates)
+        ]
+        sampleModule
+    outcome.violations `shouldEqual` []
+
+  it "runs a rule whose exemption does not apply" do
+    let
+      outcome = runRules { excludeRules: [], context }
+        [ exclude [ { name: "by design", appliesTo: \_ _ -> false } ]
+            (perModule alwaysViolates)
+        ]
+        sampleModule
+    outcome.violations `shouldEqual` [ "nope" ]
+
+  it "marks the outcome fixed when a rule rewrites" do
+    let
+      outcome = runRules { excludeRules: [], context }
+        [ perModule alwaysFixes ]
+        sampleModule
+    outcome.fixed `shouldEqual` true
+    outcome.violations `shouldEqual` []
+
+  it "runs every rule, not just the first to fire" do
+    let
+      outcome = runRules { excludeRules: [], context }
+        [ perModule alwaysViolates, perModule alwaysViolates ]
+        sampleModule
+    outcome.violations `shouldEqual` [ "nope", "nope" ]

@@ -28,6 +28,12 @@ package:
     - strings
     - transformers
     - tuples
+  test:
+    main: Test.Lint.Main
+    dependencies:
+      - partial
+      - spec
+      - spec-node
 workspace:
   packageSet:
     registry: 66.9.0

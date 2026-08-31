@@ -7,4 +7,7 @@ build:
 format:
     purs-tidy format-in-place 'src/**/*.purs'
 
-check: build
+test:
+    spago test
+
+check: build test
