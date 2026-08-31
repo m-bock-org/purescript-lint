@@ -53,7 +53,3 @@ output:
     chmod -R u+w output
     echo "output/ restored from $built"
 
-# The toolchain the editor runs, materialised so the .vscode wrappers
-# skip a Nix evaluation on every call.
-ide-setup:
-    nix build .#toolchain -o .vscode/.toolchain
