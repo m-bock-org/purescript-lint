@@ -21,6 +21,7 @@ expected path - see below.
 - [What a rule is](#what-a-rule-is)
 - [What a rule sees](#what-a-rule-sees)
 - [Defining a rule set](#defining-a-rule-set)
+- [Exemptions](#exemptions)
 - [Running it](#running-it)
 - [What it prints](#what-it-prints)
 - [Working on it](#working-on-it)
@@ -177,6 +178,44 @@ myRules = Rules.do
 ```
 
 `group` is presentation only - it names a section in the output.
+
+## Exemptions
+
+Switching a rule off for something is done by naming the reason, so the
+exemption reads as documentation where it is applied. Here is the same
+rule twice, the second time skipping generated modules:
+
+<!-- PD_START:purs
+filePath: test/Test/PureScript/Lint/ReadmeExample.purs
+pick:
+  - tag: value_and_signature
+    name: arityRule
+  - tag: value_and_signature
+    name: arityRuleExceptGenerated
+  - tag: value_and_signature
+    name: generatedCode
+-->
+
+```purescript
+arityRule :: DeclarationRule
+arityRule = perDecl (maxFunctionArity 4)
+
+arityRuleExceptGenerated :: DeclarationRule
+arityRuleExceptGenerated = exclude [ generatedCode ] (perDecl (maxFunctionArity 4))
+
+generatedCode :: LintExemption (CST.Declaration Void)
+generatedCode =
+  { name: "generated code is not ours to shorten"
+  , appliesTo: \context _ -> String.contains (String.Pattern ".Generated.") context.moduleName
+  }
+```
+
+<!-- PD_END -->
+
+There are three scopes. `exclude` skips one value for one rule, as above.
+`excludePages` does the same for a survey rule's findings. And
+`runLinterWith { skipModules }` skips a module for every rule at once,
+which is the cheaper one - it is decided before any rule runs.
 
 ## Running it
 

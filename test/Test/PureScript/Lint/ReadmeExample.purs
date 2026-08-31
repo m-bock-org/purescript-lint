@@ -1,13 +1,27 @@
 -- | The rule the README shows. It lives here so it is compiled, and is
 -- | injected into the README from this file rather than written twice.
-module Test.PureScript.Lint.ReadmeExample (maxFunctionArity) where
+module Test.PureScript.Lint.ReadmeExample
+  ( arityRule
+  , arityRuleExceptGenerated
+  , generatedCode
+  , maxFunctionArity
+  ) where
 
 import Prelude
 
 import Data.Array as Array
 import Data.Maybe (Maybe(..))
+import Data.String (Pattern(..), contains) as String
 import PureScript.CST.Types (Declaration(..), Ident(..), Name(..))
-import PureScript.Lint.Rule (DeclarationLint, violations)
+import PureScript.CST.Types (Declaration) as CST
+import PureScript.Lint.Rule
+  ( DeclarationLint
+  , DeclarationRule
+  , LintExemption
+  , exclude
+  , perDecl
+  , violations
+  )
 
 maxFunctionArity :: Int -> DeclarationLint
 maxFunctionArity maxArity =
@@ -20,4 +34,17 @@ maxFunctionArity maxArity =
         | Array.length binders > maxArity ->
             violations [ n <> " takes " <> show (Array.length binders) <> " args" ]
       _ -> violations []
+  }
+
+-- | The same rule, with and without an exemption.
+arityRule :: DeclarationRule
+arityRule = perDecl (maxFunctionArity 4)
+
+arityRuleExceptGenerated :: DeclarationRule
+arityRuleExceptGenerated = exclude [ generatedCode ] (perDecl (maxFunctionArity 4))
+
+generatedCode :: LintExemption (CST.Declaration Void)
+generatedCode =
+  { name: "generated code is not ours to shorten"
+  , appliesTo: \context _ -> String.contains (String.Pattern ".Generated.") context.moduleName
   }
