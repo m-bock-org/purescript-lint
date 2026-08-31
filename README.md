@@ -8,9 +8,8 @@ It reads a Spago workspace, parses each module with
 [`language-cst-parser`](https://github.com/natefaubion/purescript-language-cst-parser),
 and runs your rules over the CST. Some rules can fix what they find.
 
-The engine ships with **no rules of its own**. A starting set lives in
-[`purescript-lint-rules`](https://github.com/m-bock/purescript-lint-rules),
-and writing your own is the expected path - see below.
+The engine ships with **no rules of its own**. Writing your own is the
+expected path - see below.
 
 **Status: early.** The API has had one consumer so far and will move.
 
