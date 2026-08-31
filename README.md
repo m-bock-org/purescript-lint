@@ -13,7 +13,7 @@ It reads a Spago workspace, parses each module with
 and runs your rules over the CST. Some rules can fix what they find.
 
 The engine ships with **no rules of its own**. Writing your own is the
-expected path - see below.
+expected path.
 
 **Status: early.** The API has had one consumer so far and will move.
 
@@ -148,7 +148,7 @@ clear.
 
 ## What a rule sees
 
-Four levels, each a different unit of syntax:
+A rule is written at one of these levels:
 
 | | sees |
 |---|---|
@@ -201,13 +201,11 @@ generatedCode =
 
 <!-- PD_END -->
 
-There are three. Two decide before a check runs, one decides after.
-
-`exclude` and `runLinterWith { skipModules }` both decide *before* a
-check runs - one value for one rule, or every rule for a whole module.
-`ignoreSubjects` decides *after*: a survey rule is handed the workspace
-in one go, so its findings can only be dropped once made, by what each
-one is about.
+`exclude` and `runLinterWith { skipModules }` decide before a check runs
+- one value for one rule, or every rule for a whole module.
+`ignoreSubjects` decides after: a survey rule is handed the workspace in
+one go, so its findings can only be dropped once made, by what each one
+is about.
 
 ## Running it
 
