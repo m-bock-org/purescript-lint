@@ -244,8 +244,7 @@ you):
 ```
 just build    # spago build --strict
 just test     # spago test
-just docs     # regenerate the README blocks injected from the source
-just check    # all three, plus a check that those blocks are in sync
+just check    # both, plus a check that the README is in sync with the source
 ```
 
 ## Contributing
