@@ -3,10 +3,10 @@
   // this repo's dev shell. Without it the extension picks up a globally
   // installed purs or one from node_modules, which is a different
   // compiler from the one the build uses.
-  "purescript.pursExe": "${workspaceFolder}/.vscode/purs",
-  "purescript.buildCommand": "${workspaceFolder}/.vscode/spago build --purs-args --json-errors",
+  "purescript.pursExe": ".vscode/purs",
+  "purescript.buildCommand": ".vscode/spago build --purs-args --json-errors",
   "purescript.formatter": "purs-tidy",
-  "purescript.pursTidyExe": "${workspaceFolder}/.vscode/purs-tidy",
+  "purescript.pursTidyExe": ".vscode/purs-tidy",
 
   // The npm bin directory holds a second purs and a second spago whose
   // versions are pinned in package.json, not in the flake. Keeping it
