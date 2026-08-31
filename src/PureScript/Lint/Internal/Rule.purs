@@ -12,6 +12,7 @@ module PureScript.Lint.Internal.Rule
   , ModuleLint
   , ModuleRule
   , Finding
+  , Grouped
   , RuleInfo
   , RuleOutcome
   , ruleInfo
@@ -289,9 +290,14 @@ type RuleInfo =
   , badExample :: Maybe String
   }
 
--- | One thing a rule found, and which rule found it.
+-- | A rule, and the groups it was written under.
+type Grouped a = { groups :: Array String, rule :: a }
+
+-- | One thing a rule found, which rule found it, and where that rule
+-- | sits in the set.
 type Finding =
   { rule :: RuleInfo
+  , groups :: Array String
   , message :: String
   , hint :: Maybe String
   }
@@ -302,17 +308,20 @@ type RuleOutcome a = { result :: a, fixed :: Boolean, violations :: Array Findin
 
 -- | Run every rule over one value, threading each rewrite into the next
 -- | rule's input.
-runRules :: ∀ r a. RuleLike r a => LintContext -> Array r -> a -> RuleOutcome a
+runRules
+  :: ∀ r a. RuleLike r a => LintContext -> Array (Grouped r) -> a -> RuleOutcome a
 runRules context rules initial =
   let
-    applyOne acc r
+    applyOne acc { groups, rule: r }
       | ruleDisabled r = acc
       | otherwise =
           case skipWhen { exemptions: ruleExclude r, check: ruleCheck r } context acc.result of
             Passed -> acc
             Violations found hint -> acc
-              { violations = acc.violations <> map (asFinding r hint) (NEA.toArray found) }
+              { violations =
+                  acc.violations <> map (asFinding groups r hint) (NEA.toArray found)
+              }
             Fixed result -> acc { result = result, fixed = true }
-    asFinding r hint message = { rule: ruleInfo r, message, hint }
+    asFinding groups r hint message = { rule: ruleInfo r, groups, message, hint }
   in
     Array.foldl applyOne { result: initial, fixed: false, violations: [] } rules

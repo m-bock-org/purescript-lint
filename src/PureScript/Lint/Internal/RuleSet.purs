@@ -9,7 +9,7 @@ module PureScript.Lint.Internal.RuleSet
 
 import Data.Array (foldl, snoc) as Array
 import PureScript.Lint.Internal.Survey (PackageRule, WorkspaceRule)
-import PureScript.Lint.Rule (DeclarationRule, ExprRule, ModuleRule)
+import PureScript.Lint.Internal.Rule (DeclarationRule, ExprRule, Grouped, ModuleRule)
 
 -- | One entry in a rule set. Build one with `rule` or `group`.
 data Rule
@@ -49,25 +49,27 @@ group = RuleGroup
 -- | A rule set sorted into one array per level, which is the shape the
 -- | runner needs.
 type FlatRules =
-  { modules :: Array ModuleRule
-  , declarations :: Array DeclarationRule
-  , expressions :: Array ExprRule
-  , packages :: Array PackageRule
-  , workspaces :: Array WorkspaceRule
+  { modules :: Array (Grouped ModuleRule)
+  , declarations :: Array (Grouped DeclarationRule)
+  , expressions :: Array (Grouped ExprRule)
+  , packages :: Array (Grouped PackageRule)
+  , workspaces :: Array (Grouped WorkspaceRule)
   }
 
--- | Sort a rule set by level, discarding grouping.
+-- | Sort a rule set by level, keeping the groups each rule sits under.
 flattenRules :: Array Rule -> FlatRules
 flattenRules rules =
   let
-    step acc = case _ of
-      RuleModule r -> acc { modules = Array.snoc acc.modules r }
-      RuleDeclaration r -> acc { declarations = Array.snoc acc.declarations r }
-      RuleExpr r -> acc { expressions = Array.snoc acc.expressions r }
-      RulePackage r -> acc { packages = Array.snoc acc.packages r }
-      RuleWorkspace r -> acc { workspaces = Array.snoc acc.workspaces r }
-      RuleGroup _ rs -> Array.foldl step acc rs
+    step groups acc = case _ of
+      RuleModule r -> acc { modules = Array.snoc acc.modules { groups, rule: r } }
+      RuleDeclaration r ->
+        acc { declarations = Array.snoc acc.declarations { groups, rule: r } }
+      RuleExpr r -> acc { expressions = Array.snoc acc.expressions { groups, rule: r } }
+      RulePackage r -> acc { packages = Array.snoc acc.packages { groups, rule: r } }
+      RuleWorkspace r ->
+        acc { workspaces = Array.snoc acc.workspaces { groups, rule: r } }
+      RuleGroup name rs -> Array.foldl (step (Array.snoc groups name)) acc rs
 
     empty = { modules: [], declarations: [], expressions: [], packages: [], workspaces: [] }
   in
-    Array.foldl step empty rules
+    Array.foldl (step []) empty rules

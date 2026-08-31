@@ -29,13 +29,13 @@ context =
 messagesFor :: Int -> String -> Array String
 messagesFor maxArity src =
   Array.concatMap
-    (\decl -> map _.message (runRules context [ perDecl (maxFunctionArity maxArity) ] decl).violations)
+    (\decl -> map _.message (runRules context [ { groups: [], rule: perDecl (maxFunctionArity maxArity) } ] decl).violations)
     (declarationsOf src)
 
 inModule :: String -> DeclarationRule -> String -> Array String
 inModule moduleName aRule src =
   Array.concatMap
-    (\decl -> map _.message (runRules (context { moduleName = moduleName }) [ aRule ] decl).violations)
+    (\decl -> map _.message (runRules (context { moduleName = moduleName }) [ { groups: [], rule: aRule } ] decl).violations)
     (declarationsOf src)
 
 spec :: Spec Unit

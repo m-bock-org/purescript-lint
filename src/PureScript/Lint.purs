@@ -6,6 +6,7 @@ import Control.Monad.State (State, modify_, runState)
 import Data.Array as Array
 import Data.Array.NonEmpty as NEA
 import Data.Foldable (fold, for_, sum)
+import Data.String.Common (joinWith) as String
 import Data.Maybe (Maybe(..))
 import Data.Maybe (isNothing) as Maybe
 import Data.Traversable (for)
@@ -26,6 +27,7 @@ import PureScript.CST.Types
   ) as CST
 import PureScript.Lint.Internal.Rule
   ( ExprRule
+  , Grouped
   , Finding
   , LintContext
   , ModuleExemption
@@ -110,7 +112,7 @@ printByRule located =
         hints = Array.nub (Array.catMaybes (map _.finding.hint (NEA.toArray group)))
         sharedHint = if Array.length hints == 1 then Array.head hints else Nothing
       log ""
-      log rule.name
+      log (String.joinWith " / " (Array.snoc (NEA.head group).finding.groups rule.name))
       log ("  " <> rule.description)
       for_ sharedHint \h -> log ("  hint: " <> h)
       for_ rule.goodExample \e -> log ("    good  " <> e)
@@ -199,7 +201,11 @@ rewriteDecls context (CST.Module moduleFields) perDeclaration =
 
 type ExprLintState = { violations :: Array Finding, fixed :: Boolean }
 
-lintExprsInDecl :: Array ExprRule -> LintContext -> CST.Declaration Void -> RuleOutcome (CST.Declaration Void)
+lintExprsInDecl
+  :: Array (Grouped ExprRule)
+  -> LintContext
+  -> CST.Declaration Void
+  -> RuleOutcome (CST.Declaration Void)
 lintExprsInDecl exprRules context decl =
   let
     applyExprRules :: CST.Expr Void -> State ExprLintState (CST.Expr Void)

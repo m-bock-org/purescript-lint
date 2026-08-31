@@ -24,7 +24,7 @@ import Prelude
 import Data.Array (any, concatMap, filter) as Array
 import Data.Maybe (Maybe)
 import Node.Path (FilePath)
-import PureScript.Lint.Internal.Rule (class RuleOptions, ModuleKind)
+import PureScript.Lint.Internal.Rule (class RuleOptions, Grouped, ModuleKind)
 
 -- | One module, as a survey sees it: where it is, not what is in it.
 type SurveyModule = { moduleName :: String, path :: FilePath, kind :: ModuleKind }
@@ -127,10 +127,11 @@ instance SurveyLike WorkspaceRule WorkspaceSurvey where
   surveyCheck (WorkspaceRule r) = r.rule.rule
 
 -- | Run every survey rule and collect what they found.
-runSurveyRules :: ∀ r s. SurveyLike r s => Array r -> s -> Array String
+runSurveyRules
+  :: ∀ r s. SurveyLike r s => Array (Grouped r) -> s -> Array String
 runSurveyRules rules survey =
   let
-    applyOne r
+    applyOne { rule: r }
       | surveyDisabled r = []
       | otherwise = map _.message (Array.filter (kept r) (surveyCheck r survey))
   in

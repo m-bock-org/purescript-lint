@@ -173,8 +173,6 @@ myRules = Rules.do
     rule $ perModule myModuleRule
 ```
 
-`group` is presentation only - it names a section in the output.
-
 ## Exemptions
 
 Switching a rule off for something is done by naming the reason, so the
@@ -248,7 +246,7 @@ Grouped by the rule that fired: what the rule wants, then every place it
 was not met. A rule explains itself once, however many things it found.
 
 ```
-max-function-arity
+Declarations / max-function-arity
   Flags a function with more arguments than allowed.
     good  resize { width, height } img = ...
     bad   resize width height img = ...
