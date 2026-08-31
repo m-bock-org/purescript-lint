@@ -19,20 +19,26 @@ A rule is a record: a name, a description, an example of each side, and a
 function from some piece of syntax to a verdict.
 
 ```purescript
-unicodeForall :: DeclarationLint
-unicodeForall =
-  { name: RuleName "unicode-forall"
-  , description: "Requires the unicode forall quantifier rather than the ASCII keyword."
-  , goodExample: Just "identity :: ∀ a. a -> a"
-  , badExample: Just "identity :: forall a. a -> a"
-  , rule: \_context decl ->
-      if hasAsciiForall decl then Fixed (toUnicode decl) else Passed
+sameConstructorArm :: ExprLint
+sameConstructorArm =
+  { name: RuleName "same-constructor-arm"
+  , description: "Flags a case arm that rebuilds the constructor it just matched."
+  , goodExample: Just "map f m"
+  , badExample: Just "case m of\n  Just x -> Just (f x)\n  Nothing -> Nothing"
+  , rule: \_context expr ->
+      if rebuildsMatchedConstructor expr then Violation "this case is a map" else Passed
   }
 ```
 
-A verdict is `Passed`, `Violation String`, or `Fixed` with the rewritten
-syntax. Rules that return `Fixed` are auto-fixable; the bar for that is
-that no judgment is left to a human.
+That one is worth having because a formatter cannot reach it. The
+problem is not how the code is laid out, it is what it means: matching
+`Just` and rebuilding `Just` around the result is `map`, spelled
+long-hand. Catching that needs something that looks at structure.
+
+A verdict is `Passed`, `Violation String`, `ViolationWithHint`, or
+`Fixed` with rewritten syntax. `Fixed` makes a rule auto-fixable, and the
+bar for it is that no judgment is left to a human - which most rules
+worth writing do not clear.
 
 There is no plugin registry and no discovery. You import the rules you
 want and put them in a list, which means an unused rule is a compile
