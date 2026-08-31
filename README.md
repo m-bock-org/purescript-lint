@@ -231,12 +231,13 @@ type LintOptions = { skipModules :: Array ModuleExemption }
 ```purescript
 module Main where
 
+import Node.Process (exit')
 import PureScript.Lint (runLinter)
 
 main :: Effect Unit
 main = launchAff_ do
   clean <- runLinter myRules
-  liftEffect (exit (if clean then 0 else 1))
+  liftEffect (exit' (if clean then 0 else 1))
 ```
 
 Run it from a Spago project directory.
