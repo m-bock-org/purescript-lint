@@ -17,6 +17,16 @@ expected path - see below.
 
 **Status: early.** The API has had one consumer so far and will move.
 
+- [Installation](#installation)
+- [What a rule is](#what-a-rule-is)
+- [What a rule sees](#what-a-rule-sees)
+- [Defining a rule set](#defining-a-rule-set)
+- [Running it](#running-it)
+- [What it prints](#what-it-prints)
+- [Working on it](#working-on-it)
+- [Contributing](#contributing)
+- [Licence](#licence)
+
 ## Installation
 
 Not on the registry yet, so add it to `extraPackages` and pin each one to
