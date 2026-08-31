@@ -14,6 +14,13 @@
         lib = al-dente.lib.${system};
 
         # A wrong hash makes nix report the right one.
+        # What the editor runs, so it never reaches for a globally
+        # installed compiler or the one under node_modules.
+        toolchain = pkgs.symlinkJoin {
+          name = "toolchain";
+          paths = [ lib.defaults.purs lib.defaults.spago lib.defaults.purs-tidy ];
+        };
+
         workspace = lib.mkWorkspace {
           src = ./.;
           name = "lint-purs";
@@ -52,10 +59,7 @@
 
         # What the editor runs, so it never reaches for a globally
         # installed compiler or the one under node_modules.
-        packages.toolchain = pkgs.symlinkJoin {
-          name = "toolchain";
-          paths = [ lib.defaults.purs lib.defaults.spago lib.defaults.purs-tidy ];
-        };
+        packages.toolchain = toolchain;
 
         checks.tests = pkgs.runCommand "lint-purs-tests" { } ''
           ${lib.mkRunner {
@@ -74,6 +78,14 @@
           # outside it, `purs` is whatever is installed globally.
           shellHook = ''
             case $- in *i*) export PS1="(lint) $PS1" ;; esac
+
+            # Point the editor at this exact toolchain. Done here rather
+            # than by a command you have to remember, and refreshed on
+            # every entry, so it cannot go stale against the flake - the
+            # editor and the build stay the same compiler by
+            # construction. The .vscode wrappers read this symlink and
+            # then need no nix at all.
+            ln -sfn ${toolchain} .vscode/.toolchain
 
             # patchdown's FFI imports js-yaml at runtime, so the docs
             # step needs node_modules. Linked from the store rather than
