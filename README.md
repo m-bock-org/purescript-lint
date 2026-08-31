@@ -17,6 +17,62 @@ expected path - see below.
 
 **Status: early.** The API has had one consumer so far and will move.
 
+## Installation
+
+Not on the registry yet, so add it to `extraPackages` by commit. Its own
+dependency `encode-decode` is not on the registry either, so that one
+needs an entry too:
+
+```yaml
+workspace:
+  extraPackages:
+    lint-purs:
+      git: https://github.com/m-bock/purescript-lint.git
+      ref: d2740bc5b55c88833101e8ac3ed700989e8407d3
+      dependencies:
+        - aff
+        - arrays
+        - console
+        - effect
+        - either
+        - encode-decode
+        - foldable-traversable
+        - foreign-object
+        - language-cst-parser
+        - maybe
+        - node-buffer
+        - node-child-process
+        - node-fs
+        - node-glob-basic
+        - node-path
+        - ordered-collections
+        - prelude
+        - strings
+        - transformers
+        - tuples
+    encode-decode:
+      git: https://github.com/m-bock/purescript-encode-decode.git
+      ref: 07a361b0e42314ee6521b8ccc774eca117be57d0
+      dependencies:
+        - argonaut-core
+        - argonaut-codecs
+        - arrays
+        - contravariant
+        - either
+        - foldable-traversable
+        - foreign-object
+        - heterogeneous
+        - maybe
+        - ordered-collections
+        - prelude
+        - record
+        - transformers
+        - tuples
+        - typelevel-prelude
+```
+
+Then add `lint-purs` to your package's `dependencies`.
+
 ## What a rule is
 
 A rule is a record: a name, a description, an example of each side, and a
