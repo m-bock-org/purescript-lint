@@ -6,8 +6,7 @@
 -- | how a package is laid out does not pay for parsing it. `perPackage`
 -- | sees one package; `perWorkspace` sees them all.
 -- |
--- | A survey rule returns findings and cannot rewrite anything: there is
--- | no syntax in front of it to fix.
+-- | A survey rule reports findings.
 module PureScript.Lint.Rule.Survey (module Exports) where
 
 import PureScript.Lint.Internal.Survey

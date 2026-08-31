@@ -54,9 +54,8 @@ data LintResult a
   | Violations (NonEmptyArray String) (Maybe String)
   | Fixed a
 
--- | Every finding a rule made. No findings is how a rule passes, so
--- | there is no separate `passed` to reach for - and a rule that
--- | computes its findings does not have to special-case the empty run.
+-- | Every finding a rule made. A rule passes by finding nothing, so
+-- | `violations []` is how it says so.
 violations :: ∀ a. Array String -> LintResult a
 violations found =
   Maybe.maybe Passed (\vs -> Violations vs Nothing) (NEA.fromArray found)
@@ -66,10 +65,8 @@ violations found =
 fixed :: ∀ a. a -> LintResult a
 fixed = Fixed
 
--- | Attach a suggestion to every finding of a result. A hint belongs to
--- | the rule rather than to any one finding - the rules that carry one
--- | say the same thing however many things they found - so it is set
--- | here rather than passed in alongside each message.
+-- | Attach a suggestion to every finding of a result. The hint belongs
+-- | to the rule, so it reads the same however many things were found.
 withHint :: ∀ a. String -> LintResult a -> LintResult a
 withHint hint = case _ of
   Violations found _ -> Violations found (Just hint)
@@ -123,9 +120,8 @@ type ExprLint =
   , rule :: LintContext -> CST.Expr Void -> LintResult (CST.Expr Void)
   }
 
--- | A named reason one rule should skip a particular value. The name is
--- | there so an exemption reads as documentation at the point it is
--- | applied.
+-- | A named reason one rule should skip a particular value. The name
+-- | reads as documentation where the exemption is applied.
 type LintExemption a =
   { name :: String
   , appliesTo :: LintContext -> a -> Boolean

@@ -108,9 +108,7 @@ printFinding { rule, message, hint } = fold
   , "  [" <> rule.name <> "]"
   ]
 
--- | Every rule that fired, explaining itself once rather than once per
--- | finding - the description and examples are about the rule, and
--- | repeating them for each line they matched buries the findings.
+-- | Every rule that fired, each explaining itself once.
 printRulesThatFired :: Array RuleInfo -> Aff Unit
 printRulesThatFired fired =
   let

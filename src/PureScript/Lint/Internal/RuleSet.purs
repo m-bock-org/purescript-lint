@@ -11,8 +11,7 @@ import Data.Array (foldl, snoc) as Array
 import PureScript.Lint.Internal.Survey (PackageRule, WorkspaceRule)
 import PureScript.Lint.Rule (DeclarationRule, ExprRule, ModuleRule)
 
--- | One entry in a rule set: a rule at any of the levels, or a named
--- | group of them.
+-- | One entry in a rule set. Build one with `rule` or `group`.
 data Rule
   = RuleModule ModuleRule
   | RuleDeclaration DeclarationRule

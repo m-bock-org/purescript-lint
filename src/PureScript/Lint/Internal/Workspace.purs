@@ -53,10 +53,8 @@ modulesOf packagePath = do
   testModules <- modulesOfKind TestModule (moduleGlob packagePath "test")
   pure (sourceModules <> testModules)
 
--- | The glob for one of a package's two module trees. Built with
--- | `Node.Path.concat` rather than string append: spago reports a
--- | root-level package's path as `./`, and appending gives `.//src/...`,
--- | which matches nothing at all.
+-- | The glob for one of a package's two module trees. Spago reports a
+-- | root-level package's path as `./`, so the join has to normalise.
 moduleGlob :: FilePath -> String -> String
 moduleGlob packagePath tree = Path.concat [ packagePath, tree, "**", "*.purs" ]
 
