@@ -4,8 +4,10 @@ import Prelude
 
 import Control.Monad.State (State, modify_, runState)
 import Data.Array as Array
+import Data.Array.NonEmpty as NEA
 import Data.Foldable (fold, for_, sum)
 import Data.Maybe (Maybe(..))
+import Data.Maybe (isNothing) as Maybe
 import Data.Traversable (for)
 import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff)
@@ -47,24 +49,24 @@ runLinter = runLinterWith { skipModules: [] }
 runLinterWith :: LintOptions -> Array Rule -> Aff Boolean
 runLinterWith { skipModules } rules = do
   workspace <- Workspace.getWorkspace
-  printWorkspace workspace
   let
     flatRules = flattenRules rules
     configured = { skipModules, flatRules }
-  log $ fold [ "Linter: ", show (ruleCount flatRules), " rule(s)" ]
+    moduleCount = Array.length (Array.concatMap _.modules workspace.packages)
   scanned <- for workspace.packages \pkg -> do
     perModule <- for pkg.modules (lintModule configured pkg.name)
     let survey = { packageName: pkg.name, packagePath: pkg.path, modules: map _.surveyed perModule }
     pure
       { survey
       , violations: sum (map _.violations perModule)
-      , fired: Array.concatMap _.fired perModule
+      , located: Array.concatMap _.located perModule
       }
   surveyed <- reportSurvey configured (map _.survey scanned)
   let total = sum (map _.violations scanned) + surveyed
-  printRulesThatFired (Array.concatMap _.fired scanned)
-  log ""
-  log ("Linter: " <> show total <> " violation(s)")
+  printByRule (Array.concatMap _.located scanned)
+  printSummary total
+    (Array.length (Array.nub (map _.moduleName (Array.concatMap _.located scanned))))
+    moduleCount
   pure (total == 0)
 
 reportSurvey :: Configured -> Array PackageSurvey -> Aff Int
@@ -94,17 +96,52 @@ type Configured =
   }
 
 type ModuleScan =
-  { surveyed :: SurveyModule, violations :: Int, fired :: Array RuleInfo }
+  { surveyed :: SurveyModule
+  , violations :: Int
+  , located :: Array Located
+  }
 
--- | One finding on one line: what is wrong, then which rule says so.
-printFinding :: Finding -> String
-printFinding { rule, message, hint } = fold
-  [ message
-  , case hint of
-      Just h -> " (hint: " <> h <> ")"
-      Nothing -> ""
-  , "  [" <> rule.name <> "]"
-  ]
+-- | One finding, and the module it was found in.
+type Located = { moduleName :: String, finding :: Finding }
+
+-- | Findings grouped by the rule that made them: what the rule wants,
+-- | then every place it was not met.
+printByRule :: Array Located -> Aff Unit
+printByRule located =
+  let
+    groups = Array.groupBy (\a b -> a.finding.rule.name == b.finding.rule.name)
+      (Array.sortWith (_.finding.rule.name) located)
+  in
+    for_ groups \group -> do
+      let
+        rule = (NEA.head group).finding.rule
+        hints = Array.nub (Array.catMaybes (map _.finding.hint (NEA.toArray group)))
+        sharedHint = if Array.length hints == 1 then Array.head hints else Nothing
+      log ""
+      log rule.name
+      log ("  " <> rule.description)
+      for_ sharedHint \h -> log ("  hint: " <> h)
+      for_ rule.goodExample \e -> log ("    good  " <> e)
+      for_ rule.badExample \e -> log ("    bad   " <> e)
+      for_ (NEA.toArray group) \{ moduleName, finding } -> do
+        log ""
+        log ("  " <> moduleName)
+        log ("    " <> finding.message)
+        when (Maybe.isNothing sharedHint) do
+          for_ finding.hint \h -> log ("    hint: " <> h)
+
+-- | The one-line total, after everything else.
+printSummary :: Int -> Int -> Int -> Aff Unit
+printSummary total withFindings moduleCount = do
+  log ""
+  log $ fold
+    [ show total
+    , if total == 1 then " finding in " else " findings in "
+    , show withFindings
+    , " of "
+    , show moduleCount
+    , " modules"
+    ]
 
 -- | Every rule that fired, each explaining itself once.
 printRulesThatFired :: Array RuleInfo -> Aff Unit
@@ -114,11 +151,13 @@ printRulesThatFired fired =
   in
     unless (Array.null distinct) do
       log ""
+      log "---"
       for_ distinct \r -> do
-        log ("  " <> r.name)
-        log ("    " <> r.description)
-        for_ r.goodExample \e -> log ("    good: " <> e)
-        for_ r.badExample \e -> log ("    bad:  " <> e)
+        log ""
+        log r.name
+        log ("  " <> r.description)
+        for_ r.goodExample \e -> log ("    good  " <> e)
+        for_ r.badExample \e -> log ("    bad   " <> e)
 
 lintModule :: Configured -> String -> WorkspaceModule -> Aff ModuleScan
 lintModule { skipModules, flatRules } packageName workspaceModule = do
@@ -135,7 +174,7 @@ lintModule { skipModules, flatRules } packageName workspaceModule = do
     surveyed =
       { moduleName: context.moduleName, path: context.path, kind: context.kind }
   if Array.any (\g -> g.appliesTo context) skipModules then
-    pure { surveyed, violations: 0, fired: [] }
+    pure { surveyed, violations: 0, located: [] }
   else do
     let
       afterModules = runRules context flatRules.modules original
@@ -146,9 +185,13 @@ lintModule { skipModules, flatRules } packageName workspaceModule = do
       violations = afterModules.violations <> afterDeclarations.violations <>
         afterExpressions.violations
       fixed = afterModules.fixed || afterDeclarations.fixed || afterExpressions.fixed
-    for_ violations \f -> log (fold [ "  ", context.moduleName, ": ", printFinding f ])
+    pure unit
     when fixed (Workspace.writeModule workspaceModule.path afterExpressions.result)
-    pure { surveyed, violations: Array.length violations, fired: map _.rule violations }
+    pure
+      { surveyed
+      , violations: Array.length violations
+      , located: map (\f -> { moduleName: context.moduleName, finding: f }) violations
+      }
 
 type PerDeclaration =
   LintContext -> CST.Declaration Void -> RuleOutcome (CST.Declaration Void)

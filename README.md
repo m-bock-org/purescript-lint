@@ -94,6 +94,13 @@ Then add `lint-purs` to your package's `dependencies`.
 A rule is a record: a name, a description, an example of each side, and a
 function from some piece of syntax to a verdict.
 
+<!-- PD_START:purs
+filePath: test/Test/PureScript/Lint/ReadmeExample.purs
+pick:
+  - tag: value_and_signature
+    name: maxFunctionArity
+-->
+
 ```purescript
 maxFunctionArity :: Int -> DeclarationLint
 maxFunctionArity maxArity =
@@ -104,11 +111,12 @@ maxFunctionArity maxArity =
   , rule: \_context decl -> case decl of
       DeclValue { name: Name { name: Ident n }, binders }
         | Array.length binders > maxArity ->
-            violation
-              (n <> " takes " <> show (Array.length binders) <> " args")
+            violations [ n <> " takes " <> show (Array.length binders) <> " args" ]
       _ -> violations []
   }
 ```
+
+<!-- PD_END -->
 
 Configuration is an argument: `maxFunctionArity 4` is a rule, and
 `maxFunctionArity 6` is a different one.
@@ -206,24 +214,23 @@ Run it from a Spago project directory.
 
 ## What it prints
 
-Each finding names the module, says what is wrong, and which rule says
-so. Each rule that fired then explains itself once, however many things
-it found.
+Grouped by the rule that fired: what the rule wants, then every place it
+was not met. A rule explains itself once, however many things it found.
+This is `maxFunctionArity 2`, the rule above, run over another package.
 
 ```
-Linter: 2 rule(s)
-  Data.Json.Decode: 42 decls, over 40  [max-decls]
-  Data.Json.Decode.Sum: jErr is 4 chars (hint: spell it out)  [min-name]
-  Test.Main: main is 4 chars (hint: spell it out)  [min-name]
+max-function-arity
+  Flags a function with more arguments than allowed.
+    good  resize { width, height } img = ...
+    bad   resize width height quality img = ...
 
-  max-decls
-    Flags a module with more top-level declarations than allowed.
-  min-name
-    Flags a top-level name too short to say what it is.
-    good: decodeRecord = ...
-    bad:  dec = ...
+  Data.Json.Decode.Sum
+    lookupCase takes 3 args
 
-Linter: 3 violation(s)
+  Data.Json.Encode.Sum
+    encodeSumCase takes 3 args
+
+2 findings in 2 of 13 modules
 ```
 
 ## Working on it
