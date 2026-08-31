@@ -215,6 +215,24 @@ Linter: 2 rule(s)
 Linter: 7 violation(s)
 ```
 
+## Working on it
+
+The toolchain is pinned in `package.json`, so install it first:
+
+```
+npm install
+```
+
+Then, with `node_modules/.bin` on `PATH` (which the `justfile` does for
+you):
+
+```
+just build    # spago build --strict
+just test     # spago test
+just docs     # regenerate the README blocks injected from the source
+just check    # all three, plus a check that those blocks are in sync
+```
+
 ## Contributing
 
 Contributions are welcome! Please [open an issue](https://github.com/m-bock/purescript-lint/issues/new) to report bugs, suggest improvements, or propose new rules to be added.
