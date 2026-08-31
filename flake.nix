@@ -73,7 +73,7 @@
           # to do this itself and stopped, and the difference matters here:
           # outside it, `purs` is whatever is installed globally.
           shellHook = ''
-            case $- in *i*) export PS1="NIX:$PS1" ;; esac
+            case $- in *i*) export PS1="(lint) $PS1" ;; esac
 
             # patchdown's FFI imports js-yaml at runtime, so the docs
             # step needs node_modules. Linked from the store rather than
