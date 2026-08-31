@@ -1,10 +1,10 @@
-module Test.PureScript.Lint.Internal.WorkspaceSpec (spec) where
+module Test.Lint.Internal.WorkspaceSpec (spec) where
 
 import Prelude
 
 import Data.String (contains) as Str
 import Data.String.Pattern (Pattern(..))
-import PureScript.Lint.Internal.Workspace (moduleGlob)
+import Lint.Internal.Workspace (moduleGlob)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 

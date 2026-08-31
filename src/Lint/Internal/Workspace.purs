@@ -1,4 +1,4 @@
-module PureScript.Lint.Internal.Workspace
+module Lint.Internal.Workspace
   ( LocalPackage
   , Workspace
   , WorkspaceModule
@@ -27,8 +27,8 @@ import PureScript.CST (RecoveredParserResult(..), parseModule, printModule) as C
 import PureScript.CST.Errors (printParseError)
 import PureScript.CST.Parser.Monad (PositionedError)
 import PureScript.CST.Types (Module) as CST
-import PureScript.Lint.Internal.Rule (ModuleKind(..))
-import PureScript.Lint.Internal.Spago (SpagoPkg(..), spagoLsPackages)
+import Lint.Internal.Rule (ModuleKind(..))
+import Lint.Internal.Spago (SpagoPkg(..), spagoLsPackages)
 
 -- | Every package this repo owns, as a structural map. Cheap to hold
 -- | whole; a module's CST is read separately when something needs it.

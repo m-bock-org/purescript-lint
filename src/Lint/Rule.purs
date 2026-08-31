@@ -4,9 +4,9 @@
 -- | Pick the level with `perExpr`, `perDecl` or `perModule`, which
 -- | decides what the function is handed and how often it runs. Reach for
 -- | the smallest one that can see the answer.
-module PureScript.Lint.Rule (module Exports) where
+module Lint.Rule (module Exports) where
 
-import PureScript.Lint.Internal.Rule
+import Lint.Internal.Rule
   ( class HasExclude
   , class RuleOptions
   , DeclarationLint

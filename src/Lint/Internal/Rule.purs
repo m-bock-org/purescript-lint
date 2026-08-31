@@ -1,4 +1,4 @@
-module PureScript.Lint.Internal.Rule
+module Lint.Internal.Rule
   ( Guarded
   , DeclarationLint
   , DeclarationRule

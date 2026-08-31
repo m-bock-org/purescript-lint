@@ -4,15 +4,15 @@
 -- | qualified - so a rule set reads as a nested tree:
 -- |
 -- | ```purescript
--- | import PureScript.Lint.RuleSet.Do (group, rule)
--- | import PureScript.Lint.RuleSet.Do as Rules
+-- | import Lint.RuleSet.Do (group, rule)
+-- | import Lint.RuleSet.Do as Rules
 -- |
 -- | myRules :: Array Rule
 -- | myRules = Rules.do
 -- |   group "Declarations" Rules.do
 -- |     rule $ perDecl (maxFunctionArity 4)
 -- | ```
-module PureScript.Lint.RuleSet.Do
+module Lint.RuleSet.Do
   ( discard
   , group
   , rule
@@ -21,8 +21,8 @@ module PureScript.Lint.RuleSet.Do
 import Prelude
 
 import Data.Array (singleton) as Array
-import PureScript.Lint.Internal.RuleSet (class ToRule, Rule)
-import PureScript.Lint.Internal.RuleSet (group, rule) as RuleSet
+import Lint.Internal.RuleSet (class ToRule, Rule)
+import Lint.Internal.RuleSet (group, rule) as RuleSet
 
 -- | Required for `Rules.do`.
 discard :: ∀ m. Semigroup m => m -> (Unit -> m) -> m

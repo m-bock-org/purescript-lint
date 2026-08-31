@@ -1,10 +1,10 @@
-module Test.PureScript.Lint.Internal.RuleSetSpec (spec) where
+module Test.Lint.Internal.RuleSetSpec (spec) where
 
 import Prelude
 
 import Data.Array (length) as Array
 import Data.Maybe (Maybe(..))
-import PureScript.Lint.Rule
+import Lint.Rule
   ( DeclarationLint
   , ExprLint
   , ModuleLint
@@ -13,7 +13,7 @@ import PureScript.Lint.Rule
   , perModule
   , violations
   )
-import PureScript.Lint.Internal.RuleSet (flattenRules, group, rule)
+import Lint.Internal.RuleSet (flattenRules, group, rule)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 

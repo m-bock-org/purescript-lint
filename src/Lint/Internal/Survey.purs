@@ -1,4 +1,4 @@
-module PureScript.Lint.Internal.Survey
+module Lint.Internal.Survey
   ( PackageLint
   , PackageRule
   , PackageSurvey
@@ -25,7 +25,7 @@ import Prelude
 import Data.Array (any, concatMap, filter) as Array
 import Data.Maybe (Maybe)
 import Node.Path (FilePath)
-import PureScript.Lint.Internal.Rule (class RuleOptions, Grouped, ModuleKind)
+import Lint.Internal.Rule (class RuleOptions, Grouped, ModuleKind)
 
 -- | One module, as a survey sees it: where it is, not what is in it.
 type SurveyModule = { moduleName :: String, path :: FilePath, kind :: ModuleKind }

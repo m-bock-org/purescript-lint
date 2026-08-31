@@ -1,6 +1,6 @@
 -- | The rule the README shows. It lives here so it is compiled, and is
 -- | injected into the README from this file rather than written twice.
-module Test.PureScript.Lint.ReadmeExample
+module Test.Lint.ReadmeExample
   ( arityRule
   , arityUnlessGenerated
   , generatedCode
@@ -14,7 +14,7 @@ import Data.Maybe (Maybe(..))
 import Data.String (Pattern(..), contains)
 import PureScript.CST.Types (Declaration(..), Ident(..), Name(..))
 import PureScript.CST.Types (Declaration) as CST
-import PureScript.Lint.Rule
+import Lint.Rule
   ( DeclarationLint
   , DeclarationRule
   , LintExemption

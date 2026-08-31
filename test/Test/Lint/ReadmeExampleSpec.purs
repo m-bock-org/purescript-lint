@@ -1,4 +1,4 @@
-module Test.PureScript.Lint.ReadmeExampleSpec (spec) where
+module Test.Lint.ReadmeExampleSpec (spec) where
 
 import Prelude
 
@@ -7,8 +7,8 @@ import Data.Maybe (Maybe(..))
 import Partial.Unsafe (unsafeCrashWith)
 import PureScript.CST (RecoveredParserResult(..), parseModule)
 import PureScript.CST.Types (Declaration, Module(..), ModuleBody(..)) as CST
-import PureScript.Lint.Internal.Rule (DeclarationRule, LintContext, ModuleKind(..), perDecl, runRules)
-import Test.PureScript.Lint.ReadmeExample (arityRule, arityUnlessGenerated, maxFunctionArity)
+import Lint.Internal.Rule (DeclarationRule, LintContext, ModuleKind(..), perDecl, runRules)
+import Test.Lint.ReadmeExample (arityRule, arityUnlessGenerated, maxFunctionArity)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 

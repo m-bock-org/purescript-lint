@@ -1,4 +1,4 @@
-module Test.PureScript.Lint.Internal.RuleSpec (spec) where
+module Test.Lint.Internal.RuleSpec (spec) where
 
 import Prelude
 
@@ -7,7 +7,7 @@ import Data.Maybe (Maybe(..))
 import Partial.Unsafe (unsafeCrashWith)
 import PureScript.CST (RecoveredParserResult(..), parseModule)
 import PureScript.CST.Types (Module) as CST
-import PureScript.Lint.Internal.Rule
+import Lint.Internal.Rule
   ( LintContext
   , ModuleKind(..)
   , ModuleLint
@@ -26,7 +26,7 @@ import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
 spec :: Spec Unit
-spec = describe "PureScript.Lint.Internal.Rule" do
+spec = describe "Lint.Internal.Rule" do
   dedentSpec
   runRulesSpec
 

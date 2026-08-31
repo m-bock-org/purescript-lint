@@ -1,4 +1,4 @@
-module PureScript.Lint (LintOptions, runLinter, runLinterWith) where
+module Lint (LintOptions, runLinter, runLinterWith) where
 
 import Prelude
 
@@ -25,7 +25,7 @@ import PureScript.CST.Types
   , ModuleName(..)
   , Name(..)
   ) as CST
-import PureScript.Lint.Internal.Rule
+import Lint.Internal.Rule
   ( ExprRule
   , Grouped
   , Finding
@@ -34,10 +34,10 @@ import PureScript.Lint.Internal.Rule
   , RuleOutcome
   , runRules
   )
-import PureScript.Lint.Internal.RuleSet (FlatRules, Rule, flattenRules)
-import PureScript.Lint.Internal.Survey (PackageSurvey, SurveyModule, runSurveyRules)
-import PureScript.Lint.Internal.Workspace (WorkspaceModule)
-import PureScript.Lint.Internal.Workspace as Workspace
+import Lint.Internal.RuleSet (FlatRules, Rule, flattenRules)
+import Lint.Internal.Survey (PackageSurvey, SurveyModule, runSurveyRules)
+import Lint.Internal.Workspace (WorkspaceModule)
+import Lint.Internal.Workspace as Workspace
 
 -- | Run a rule set over the Spago workspace in the current directory,
 -- | reporting everything it finds. `true` when the workspace is clean.

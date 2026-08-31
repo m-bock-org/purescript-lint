@@ -91,7 +91,7 @@ A rule is a record: a name, a description, an example of each side, and a
 function from some piece of syntax to a verdict.
 
 <!-- PD_START:purs
-filePath: test/Test/PureScript/Lint/ReadmeExample.purs
+filePath: test/Test/Lint/ReadmeExample.purs
 pick:
   - tag: value_and_signature
     name: maxFunctionArity
@@ -119,7 +119,7 @@ Configuration is an argument: `maxFunctionArity 4` is a rule, and
 `maxFunctionArity 6` is a different one.
 
 <!-- PD_START:purs
-filePath: src/PureScript/Lint/Internal/Rule.purs
+filePath: src/Lint/Internal/Rule.purs
 pick:
   - tag: signature
     name: violations
@@ -160,8 +160,8 @@ A rule is written at one of these levels:
 ## Defining a rule set
 
 ```purescript
-import PureScript.Lint.RuleSet.Do (group, rule)
-import PureScript.Lint.RuleSet.Do as Rules
+import Lint.RuleSet.Do (group, rule)
+import Lint.RuleSet.Do as Rules
 
 myRules :: Array Rule
 myRules = Rules.do
@@ -180,7 +180,7 @@ exemption reads as documentation where it is applied. Here the arity rule
 skips generated modules:
 
 <!-- PD_START:purs
-filePath: test/Test/PureScript/Lint/ReadmeExample.purs
+filePath: test/Test/Lint/ReadmeExample.purs
 pick:
   - tag: value_and_signature
     name: arityUnlessGenerated
@@ -210,7 +210,7 @@ is about.
 ## Running it
 
 <!-- PD_START:purs
-filePath: src/PureScript/Lint.purs
+filePath: src/Lint.purs
 pick:
   - tag: signature
     name: runLinter
@@ -232,7 +232,7 @@ type LintOptions = { skipModules :: Array ModuleExemption }
 module Main where
 
 import Node.Process (exit')
-import PureScript.Lint (runLinter)
+import Lint (runLinter)
 
 main :: Effect Unit
 main = launchAff_ do

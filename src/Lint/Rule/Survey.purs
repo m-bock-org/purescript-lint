@@ -7,9 +7,9 @@
 -- | sees one package; `perWorkspace` sees them all.
 -- |
 -- | A survey rule reports findings.
-module PureScript.Lint.Rule.Survey (module Exports) where
+module Lint.Rule.Survey (module Exports) where
 
-import PureScript.Lint.Internal.Survey
+import Lint.Internal.Survey
   ( class HasSubjectIgnore
   , PackageLint
   , PackageRule
