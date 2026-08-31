@@ -55,10 +55,6 @@ Four levels, each a different unit of syntax:
 | `perModule` | one module | imports, exports, line length |
 | `perPackage` / `perWorkspace` | a survey of many modules | namespace and package-boundary rules |
 
-The last two are *surveys*: a rule that needs to see the whole workspace
-(how many modules share a namespace, say) gets a cheap structural map
-rather than every module's CST at once.
-
 ## Defining a rule set
 
 ```purescript
