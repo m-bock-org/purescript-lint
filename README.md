@@ -30,10 +30,7 @@ expected path - see below.
 
 ## Installation
 
-Not on the registry yet, so add it to `extraPackages` and pin each one to
-a commit. `encode-decode` is a dependency that is not on the registry
-either, so it needs an entry of its own. Versions arrive with the
-registry release.
+Add these to `extraPackages`, and `lint-purs` to your `dependencies`.
 
 <details>
 <summary>The <code>extraPackages</code> entries</summary>
@@ -87,8 +84,6 @@ workspace:
 ```
 
 </details>
-
-Then add `lint-purs` to your package's `dependencies`.
 
 ## What a rule is
 
@@ -208,7 +203,7 @@ generatedCode =
 <!-- PD_END -->
 
 There are three scopes. `exclude` skips one value for one rule, as above.
-`excludePages` does the same for a survey rule's findings. And
+`excludeSubjects` does the same for a survey rule's findings. And
 `runLinterWith { skipModules }` skips a module for every rule at once,
 which is the cheaper one - it is decided before any rule runs.
 

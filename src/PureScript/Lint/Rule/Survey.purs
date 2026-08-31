@@ -10,17 +10,17 @@
 module PureScript.Lint.Rule.Survey (module Exports) where
 
 import PureScript.Lint.Internal.Survey
-  ( class HasPageExclude
+  ( class HasSubjectExclude
   , PackageLint
   , PackageRule
   , PackageSurvey
-  , PageExemption
+  , SubjectExemption
   , SurveyFinding
   , SurveyModule
   , WorkspaceLint
   , WorkspaceRule
   , WorkspaceSurvey
-  , excludePages
+  , excludeSubjects
   , perPackage
   , perWorkspace
   ) as Exports

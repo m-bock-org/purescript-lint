@@ -2,15 +2,15 @@ module PureScript.Lint.Internal.Survey
   ( PackageLint
   , PackageRule
   , PackageSurvey
-  , PageExemption
+  , SubjectExemption
   , SurveyFinding
   , SurveyModule
   , WorkspaceLint
   , WorkspaceRule
   , WorkspaceSurvey
-  , class HasPageExclude
+  , class HasSubjectExclude
   , class SurveyLike
-  , excludePages
+  , excludeSubjects
   , perPackage
   , perWorkspace
   , runSurveyRules
@@ -29,11 +29,13 @@ import PureScript.Lint.Internal.Rule (class RuleOptions, ModuleKind)
 -- | One module, as a survey sees it: where it is, not what is in it.
 type SurveyModule = { moduleName :: String, path :: FilePath, kind :: ModuleKind }
 
--- | One finding, and which page of the survey it is about.
-type SurveyFinding = { page :: String, message :: String }
+-- | One finding, and what it is about - the module, namespace or
+-- | package the survey rule is complaining of.
+type SurveyFinding = { subject :: String, message :: String }
 
--- | A named reason a survey rule should ignore one of its findings.
-type PageExemption = { name :: String, appliesTo :: String -> Boolean }
+-- | A named reason a survey rule should ignore findings about a
+-- | particular subject.
+type SubjectExemption = { name :: String, appliesTo :: String -> Boolean }
 
 -- | One package's modules, for a rule that reasons about a package.
 type PackageSurvey =
@@ -65,7 +67,7 @@ type WorkspaceLint =
 
 -- | A package rule with its options applied.
 newtype PackageRule = PackageRule
-  { exclude :: Array PageExemption
+  { exclude :: Array SubjectExemption
   , disabled :: Boolean
   , rule :: PackageLint
   }
@@ -78,12 +80,12 @@ perPackage check =
 instance RuleOptions PackageRule where
   disabled d (PackageRule r) = PackageRule (r { disabled = d })
 
-instance HasPageExclude PackageRule where
-  excludePages ex (PackageRule r) = PackageRule (r { exclude = ex })
+instance HasSubjectExclude PackageRule where
+  excludeSubjects ex (PackageRule r) = PackageRule (r { exclude = ex })
 
 -- | A workspace rule with its options applied.
 newtype WorkspaceRule = WorkspaceRule
-  { exclude :: Array PageExemption
+  { exclude :: Array SubjectExemption
   , disabled :: Boolean
   , rule :: WorkspaceLint
   }
@@ -96,20 +98,21 @@ perWorkspace check =
 instance RuleOptions WorkspaceRule where
   disabled d (WorkspaceRule r) = WorkspaceRule (r { disabled = d })
 
-instance HasPageExclude WorkspaceRule where
-  excludePages ex (WorkspaceRule r) = WorkspaceRule (r { exclude = ex })
+instance HasSubjectExclude WorkspaceRule where
+  excludeSubjects ex (WorkspaceRule r) = WorkspaceRule (r { exclude = ex })
 
 -- | Attaching exemptions to a survey rule.
-class HasPageExclude r where
-  -- | Give a survey rule reasons to ignore particular findings.
-  excludePages :: Array PageExemption -> r -> r
+class HasSubjectExclude r where
+  -- | Give a survey rule reasons to ignore findings about particular
+-- | subjects.
+  excludeSubjects :: Array SubjectExemption -> r -> r
 
 -- | What the runner needs of a survey rule, at either scope.
 class SurveyLike r s | r -> s where
   -- | Whether this rule was switched off.
   surveyDisabled :: r -> Boolean
   -- | The reasons this rule ignores particular findings.
-  surveyExclude :: r -> Array PageExemption
+  surveyExclude :: r -> Array SubjectExemption
   -- | The check itself.
   surveyCheck :: r -> s -> Array SurveyFinding
 
@@ -134,4 +137,4 @@ runSurveyRules rules survey =
     Array.concatMap applyOne rules
 
 kept :: ∀ r s. SurveyLike r s => r -> SurveyFinding -> Boolean
-kept r finding = not (Array.any (\ex -> ex.appliesTo finding.page) (surveyExclude r))
+kept r finding = not (Array.any (\ex -> ex.appliesTo finding.subject) (surveyExclude r))
