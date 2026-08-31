@@ -64,13 +64,12 @@ import PureScript.Lint.RuleSet.Do as Rules
 
 myRules :: Array Rule
 myRules = Rules.do
-  group "How much fits on one line" Rules.do
-    rule $ perModule (maxLineLength { code: 100, signature: 150 })
-    rule $ perModule (maxDelimiterRun 2)
+  group "Declarations" Rules.do
+    rule $ perDecl (maxFunctionArity 4)
+    rule $ perDecl myDeclarationRule
 
-  group "How deep it goes" Rules.do
-    rule $ perModule (maxCallStackDepth 4)
-    rule $ perDecl (maxLambdaNestingDepth 3)
+  group "Modules" Rules.do
+    rule $ perModule myModuleRule
 ```
 
 `group` is presentation only - it names a section in the output.
