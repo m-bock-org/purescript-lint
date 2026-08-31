@@ -52,7 +52,6 @@ instance showModuleKind :: Show ModuleKind where
     SourceModule -> "SourceModule"
     TestModule -> "TestModule"
 
--- | Private, depth 2. Used only by `toLocalPackage`. Uses `modulesOfKind`.
 modulesOf :: FilePath -> Aff (Array WorkspaceModule)
 modulesOf packagePath = do
   sourceModules <- modulesOfKind SourceModule (moduleGlob packagePath "src")
@@ -66,13 +65,11 @@ modulesOf packagePath = do
 moduleGlob :: FilePath -> String -> String
 moduleGlob packagePath tree = Path.concat [ packagePath, tree, "**", "*.purs" ]
 
--- | Private, depth 3. Used only by `modulesOf`.
 modulesOfKind :: ModuleKind -> String -> Aff (Array WorkspaceModule)
 modulesOfKind kind pattern = do
   paths <- expandGlobs "." [ pattern ]
   pure (map (\path -> { path, kind }) (Set.toUnfoldable paths))
 
--- | Uses `toLocalPackage`.
 getWorkspace :: Aff Workspace
 getWorkspace =
   let
@@ -86,13 +83,11 @@ getWorkspace =
       packages <- traverse toLocalPackage (Array.mapMaybe workspaceOnly pkgs)
       pure { packages }
 
--- | Private. Used only by `getWorkspace`. Uses `modulesOf`.
 toLocalPackage :: { name :: String, path :: FilePath } -> Aff LocalPackage
 toLocalPackage { name, path } = do
   modules <- modulesOf path
   pure { name, path, modules }
 
--- | Uses `parseFailure`.
 readModule :: WorkspaceModule -> Aff (CST.Module Void)
 readModule { path } = do
   src <- FS.readTextFile UTF8 path
@@ -101,11 +96,9 @@ readModule { path } = do
     CST.ParseSucceededWithErrors _ errs -> parseFailure path (NEA.head errs)
     CST.ParseFailed err -> parseFailure path err
 
--- | Private. Used only by `readModule`. Uses `printPositionedError`.
 parseFailure :: ∀ a. FilePath -> PositionedError -> Aff a
 parseFailure path err = Aff.throwError (Aff.error (printPositionedError path err))
 
--- | Private, depth 2. Used only by `parseFailure`.
 printPositionedError :: FilePath -> PositionedError -> String
 printPositionedError path { position, error: err } =
   fold

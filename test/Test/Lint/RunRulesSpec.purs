@@ -11,7 +11,6 @@ import PureScript.Lint.Rule
   ( LintContext
   , ModuleLint
   , ModuleRule
-  , RuleName(..)
   , disabled
   , exclude
   , fixed
@@ -25,13 +24,11 @@ import PureScript.Lint.Workspace (ModuleKind(..))
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
--- | Private. Used only by `spec`.
 sampleModule :: CST.Module Void
 sampleModule = case parseModule "module Sample where\n\nvalue :: Int\nvalue = 1\n" of
   ParseSucceeded m -> m
   _ -> unsafeCrashWith "RunRulesSpec fixture: sample module does not parse"
 
--- | Private. Used only by `spec`.
 context :: LintContext
 context =
   { packageName: "sample-pkg"
@@ -41,50 +38,45 @@ context =
   , kind: SourceModule
   }
 
--- | Private. Used only by `spec`.
 alwaysViolates :: ModuleLint
 alwaysViolates =
-  { name: RuleName "always-violates"
+  { name: "always-violates"
   , description: "Always fails, so a test can see what the runner does with a violation."
   , goodExample: Nothing
   , badExample: Nothing
   , rule: \_context _mod -> violation "nope"
   }
 
--- | Private. Used only by `spec`.
 alwaysFixes :: ModuleLint
 alwaysFixes =
-  { name: RuleName "always-fixes"
+  { name: "always-fixes"
   , description: "Always reports a fix, without actually changing anything."
   , goodExample: Nothing
   , badExample: Nothing
   , rule: \_context mod -> fixed mod
   }
 
--- | Private. Used only by `spec`.
 manyFindings :: ModuleLint
 manyFindings =
-  { name: RuleName "many-findings"
+  { name: "many-findings"
   , description: "Reports three findings at once, the way a module-level rule does."
   , goodExample: Nothing
   , badExample: Nothing
   , rule: \_context _mod -> violations [ "first", "second", "third" ]
   }
 
--- | Private. Used only by `spec`.
 findsNothing :: ModuleLint
 findsNothing =
-  { name: RuleName "finds-nothing"
+  { name: "finds-nothing"
   , description: "Computes an empty list of findings, which is how a rule passes."
   , goodExample: Nothing
   , badExample: Nothing
   , rule: \_context _mod -> violations []
   }
 
--- | Private. Used only by `spec`.
 hinted :: ModuleLint
 hinted =
-  { name: RuleName "hinted"
+  { name: "hinted"
   , description: "Carries a suggestion that belongs to the rule rather than to one finding."
   , goodExample: Nothing
   , badExample: Nothing

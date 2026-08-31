@@ -24,7 +24,7 @@ import Prelude
 import Data.Array (any, concatMap, filter) as Array
 import Data.Maybe (Maybe)
 import Node.Path (FilePath)
-import PureScript.Lint.Rule (class RuleOptions, RuleName)
+import PureScript.Lint.Rule (class RuleOptions)
 import PureScript.Lint.Workspace (ModuleKind)
 
 type SurveyModule = { moduleName :: String, path :: FilePath, kind :: ModuleKind }
@@ -42,7 +42,7 @@ type PackageSurvey =
 type WorkspaceSurvey = { packages :: Array PackageSurvey }
 
 type PackageLint =
-  { name :: RuleName
+  { name :: String
   , description :: String
   , goodExample :: Maybe String
   , badExample :: Maybe String
@@ -50,7 +50,7 @@ type PackageLint =
   }
 
 type WorkspaceLint =
-  { name :: RuleName
+  { name :: String
   , description :: String
   , goodExample :: Maybe String
   , badExample :: Maybe String
@@ -107,7 +107,6 @@ instance SurveyLike WorkspaceRule WorkspaceSurvey where
   surveyExclude (WorkspaceRule r) = r.exclude
   surveyCheck (WorkspaceRule r) = r.rule.rule
 
--- | Uses `kept`.
 runSurveyRules :: ∀ r s. SurveyLike r s => Array r -> s -> Array String
 runSurveyRules rules survey =
   let
@@ -117,6 +116,5 @@ runSurveyRules rules survey =
   in
     Array.concatMap applyOne rules
 
--- | Private. Used only by `runSurveyRules`.
 kept :: ∀ r s. SurveyLike r s => r -> SurveyFinding -> Boolean
 kept r finding = not (Array.any (\ex -> ex.appliesTo finding.page) (surveyExclude r))

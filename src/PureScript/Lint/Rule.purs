@@ -9,7 +9,6 @@ module PureScript.Lint.Rule
   , LintResult
   , ModuleLint
   , ModuleRule
-  , RuleName(..)
   , RuleOutcome
   , class HasExclude
   , class RuleLike
@@ -76,8 +75,6 @@ withHint hint = case _ of
   Violations found _ -> Violations found (Just hint)
   other -> other
 
-newtype RuleName = RuleName String
-
 type LintContext =
   { packageName :: String
   , moduleName :: String
@@ -87,7 +84,7 @@ type LintContext =
   }
 
 type ModuleLint =
-  { name :: RuleName
+  { name :: String
   , description :: String
   , goodExample :: Maybe String
   , badExample :: Maybe String
@@ -95,7 +92,7 @@ type ModuleLint =
   }
 
 type DeclarationLint =
-  { name :: RuleName
+  { name :: String
   , description :: String
   , goodExample :: Maybe String
   , badExample :: Maybe String
@@ -103,7 +100,7 @@ type DeclarationLint =
   }
 
 type ExprLint =
-  { name :: RuleName
+  { name :: String
   , description :: String
   , goodExample :: Maybe String
   , badExample :: Maybe String
@@ -228,7 +225,6 @@ instance RuleLike ExprRule (CST.Expr Void) where
 
 type RuleOutcome a = { result :: a, fixed :: Boolean, violations :: Array String }
 
--- | Uses `skipWhen`.
 runRules :: ∀ r a. RuleLike r a => LintContext -> Array r -> a -> RuleOutcome a
 runRules context rules initial =
   let

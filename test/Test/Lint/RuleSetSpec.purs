@@ -8,7 +8,6 @@ import PureScript.Lint.Rule
   ( DeclarationLint
   , ExprLint
   , ModuleLint
-  , RuleName(..)
   , perDecl
   , perExpr
   , perModule
@@ -18,30 +17,27 @@ import PureScript.Lint.RuleSet (flattenRules, group, rule)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
--- | Private. Used only by `spec`.
 noopModule :: ModuleLint
 noopModule =
-  { name: RuleName "noop-module"
+  { name: "noop-module"
   , description: "Passes. Only its shape matters here."
   , goodExample: Nothing
   , badExample: Nothing
   , rule: \_context _value -> violations []
   }
 
--- | Private. Used only by `spec`.
 noopDecl :: DeclarationLint
 noopDecl =
-  { name: RuleName "noop-decl"
+  { name: "noop-decl"
   , description: "Passes. Only its shape matters here."
   , goodExample: Nothing
   , badExample: Nothing
   , rule: \_context _value -> violations []
   }
 
--- | Private. Used only by `spec`.
 noopExpr :: ExprLint
 noopExpr =
-  { name: RuleName "noop-expr"
+  { name: "noop-expr"
   , description: "Passes. Only its shape matters here."
   , goodExample: Nothing
   , badExample: Nothing

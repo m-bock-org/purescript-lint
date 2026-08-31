@@ -28,11 +28,9 @@ import PureScript.Lint.RuleSet (FlatRules, Rule, flattenRules)
 import PureScript.Lint.Workspace (Workspace, WorkspaceModule)
 import PureScript.Lint.Workspace as Workspace
 
--- | Uses `printWorkspace`, `ruleCount`, `lintModule`, `reportSurvey`.
 runLinter :: Array Rule -> Aff Int
 runLinter = runLinterWith { skipModules: [] }
 
--- | Uses `printWorkspace`, `ruleCount`, `lintModule`, `reportSurvey`.
 runLinterWith :: LintOptions -> Array Rule -> Aff Int
 runLinterWith { skipModules } rules = do
   workspace <- Workspace.getWorkspace
@@ -50,7 +48,6 @@ runLinterWith { skipModules } rules = do
   log ("Linter: " <> show total <> " violation(s)")
   pure total
 
--- | Private. Used only by `runLinter`.
 reportSurvey :: Configured -> Array PackageSurvey -> Aff Int
 reportSurvey { flatRules } surveys = do
   let
@@ -62,7 +59,6 @@ reportSurvey { flatRules } surveys = do
   for_ findings \msg -> log ("  " <> msg)
   pure (Array.length findings)
 
--- | Private. Used only by `runLinter`.
 ruleCount :: FlatRules -> Int
 ruleCount flatRules = Array.length flatRules.modules
   + Array.length flatRules.declarations
@@ -80,7 +76,6 @@ type Configured =
 
 type ModuleScan = { surveyed :: SurveyModule, violations :: Int }
 
--- | Private. Used only by `runLinter`. Uses `moduleNameOf`, `rewriteDecls`, `lintExprsInDecl`.
 lintModule :: Configured -> String -> WorkspaceModule -> Aff ModuleScan
 lintModule { skipModules, flatRules } packageName workspaceModule = do
   original <- Workspace.readModule workspaceModule
@@ -114,20 +109,17 @@ lintModule { skipModules, flatRules } packageName workspaceModule = do
 type PerDeclaration =
   LintContext -> CST.Declaration Void -> RuleOutcome (CST.Declaration Void)
 
--- | Private, depth 3. Used only by `rewriteDecls`.
 declarationNameOf :: CST.Declaration Void -> Maybe String
 declarationNameOf = case _ of
   CST.DeclValue { name: CST.Name { name: CST.Ident n } } -> Just n
   CST.DeclSignature (CST.Labeled { label: CST.Name { name: CST.Ident n } }) -> Just n
   _ -> Nothing
 
--- | Private, depth 2. Used only by `lintModule`.
 moduleNameOf :: CST.Module Void -> String
 moduleNameOf (CST.Module { header: CST.ModuleHeader { name } }) =
   case name of
     CST.Name { name: CST.ModuleName n } -> n
 
--- | Private, depth 2. Used only by `lintModule`. Uses `declarationNameOf`.
 rewriteDecls :: LintContext -> CST.Module Void -> PerDeclaration -> RuleOutcome (CST.Module Void)
 rewriteDecls context (CST.Module moduleFields) perDeclaration =
   let
@@ -144,8 +136,6 @@ rewriteDecls context (CST.Module moduleFields) perDeclaration =
 
 type ExprLintState = { violations :: Array String, fixed :: Boolean }
 
--- | Private, depth 2. Used only by `lintModule`.
--- | Private, depth 2. Used only by `lintModule`.
 lintExprsInDecl :: Array ExprRule -> LintContext -> CST.Declaration Void -> RuleOutcome (CST.Declaration Void)
 lintExprsInDecl exprRules context decl =
   let
@@ -164,7 +154,6 @@ lintExprsInDecl exprRules context decl =
   in
     { result, fixed: finalState.fixed, violations: finalState.violations }
 
--- | Private. Used only by `runLinter`.
 printWorkspace :: Workspace -> Aff Unit
 printWorkspace { packages } = do
   log $ fold
