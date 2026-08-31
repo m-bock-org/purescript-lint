@@ -124,8 +124,8 @@ import PureScript.Lint (runLinter)
 
 main :: Effect Unit
 main = launchAff_ do
-  exitCode <- runLinter myRules
-  liftEffect (exit exitCode)
+  findings <- runLinter myRules
+  liftEffect (exit (if findings == 0 then 0 else 1))
 ```
 
 Run it from a Spago project directory.

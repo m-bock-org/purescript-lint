@@ -37,9 +37,8 @@ import PureScript.Lint.Internal.Workspace (Workspace, WorkspaceModule)
 import PureScript.Lint.Internal.Workspace as Workspace
 
 -- | Run a rule set over the Spago workspace in the current directory,
--- | reporting what every rule found and returning the number of
--- | findings - zero when the workspace is clean, which is what a caller
--- | turns into an exit code.
+-- | reporting what every rule found and returning how many findings
+-- | there were.
 -- |
 -- | A rule that rewrites is applied: the module is written back.
 runLinter :: Array Rule -> Aff Int
