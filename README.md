@@ -1,4 +1,7 @@
-# purescript-lint
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.png">
+  <img alt="purescript-lint" src="assets/logo-light.png" width="480">
+</picture>
 
 A lint engine for PureScript, written in PureScript. Rules are ordinary
 values and a rule set is a program you write, so using it means writing
