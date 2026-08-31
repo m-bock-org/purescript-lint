@@ -4,6 +4,7 @@ module PureScript.Lint.Workspace
   , Workspace
   , WorkspaceModule
   , getWorkspace
+  , moduleGlob
   , readModule
   , writeModule
   ) where
@@ -22,6 +23,7 @@ import Node.Encoding (Encoding(..))
 import Node.FS.Aff as FS
 import Node.Glob.Basic (expandGlobs)
 import Node.Path (FilePath)
+import Node.Path (concat) as Path
 import PureScript.CST (RecoveredParserResult(..), parseModule, printModule) as CST
 import PureScript.CST.Errors (printParseError)
 import PureScript.CST.Parser.Monad (PositionedError)
@@ -53,9 +55,16 @@ instance showModuleKind :: Show ModuleKind where
 -- | Private, depth 2. Used only by `toLocalPackage`. Uses `modulesOfKind`.
 modulesOf :: FilePath -> Aff (Array WorkspaceModule)
 modulesOf packagePath = do
-  sourceModules <- modulesOfKind SourceModule (packagePath <> "/src/**/*.purs")
-  testModules <- modulesOfKind TestModule (packagePath <> "/test/**/*.purs")
+  sourceModules <- modulesOfKind SourceModule (moduleGlob packagePath "src")
+  testModules <- modulesOfKind TestModule (moduleGlob packagePath "test")
   pure (sourceModules <> testModules)
+
+-- | The glob for one of a package's two module trees. Built with
+-- | `Node.Path.concat` rather than string append: spago reports a
+-- | root-level package's path as `./`, and appending gives `.//src/...`,
+-- | which matches nothing at all.
+moduleGlob :: FilePath -> String -> String
+moduleGlob packagePath tree = Path.concat [ packagePath, tree, "**", "*.purs" ]
 
 -- | Private, depth 3. Used only by `modulesOf`.
 modulesOfKind :: ModuleKind -> String -> Aff (Array WorkspaceModule)
