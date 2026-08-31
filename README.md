@@ -182,14 +182,12 @@ myRules = Rules.do
 ## Exemptions
 
 Switching a rule off for something is done by naming the reason, so the
-exemption reads as documentation where it is applied. Here is the same
-rule twice, the second time skipping generated modules:
+exemption reads as documentation where it is applied. Here the arity rule
+skips generated modules:
 
 <!-- PD_START:purs
 filePath: test/Test/PureScript/Lint/ReadmeExample.purs
 pick:
-  - tag: value_and_signature
-    name: arityRule
   - tag: value_and_signature
     name: arityRuleExceptGenerated
   - tag: value_and_signature
@@ -197,9 +195,6 @@ pick:
 -->
 
 ```purescript
-arityRule :: DeclarationRule
-arityRule = perDecl (maxFunctionArity 4)
-
 arityRuleExceptGenerated :: DeclarationRule
 arityRuleExceptGenerated = exclude [ generatedCode ] (perDecl (maxFunctionArity 4))
 
