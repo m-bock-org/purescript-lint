@@ -246,7 +246,6 @@ you):
 ```
 just build
 just test
-just check
 ```
 
 ## Contributing
