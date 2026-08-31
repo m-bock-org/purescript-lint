@@ -3,13 +3,12 @@ module PureScript.Lint.Rule
   , DeclarationRule
   , ExprLint
   , ExprRule
-  , GlobalExemption
+  , ModuleExemption
   , LintContext
   , LintExemption
   , LintResult
   , ModuleLint
   , ModuleRule
-  , RuleAlias(..)
   , RuleName(..)
   , RuleOutcome
   , class HasExclude
@@ -19,14 +18,12 @@ module PureScript.Lint.Rule
   , disabled
   , exclude
   , fixed
-  , name
   , perDecl
   , perExpr
   , perModule
   , ruleCheck
   , ruleDisabled
   , ruleExclude
-  , ruleName
   , runRules
   , skipWhen
   , violation
@@ -36,7 +33,7 @@ module PureScript.Lint.Rule
 
 import Prelude
 
-import Data.Array (elem, filter, find, foldl, head, init, last, tail) as Array
+import Data.Array (filter, find, foldl, head, init, last, tail) as Array
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty (fromArray, singleton, toArray) as NEA
 import Data.Foldable (minimum) as Foldable
@@ -81,10 +78,6 @@ withHint hint = case _ of
 
 newtype RuleName = RuleName String
 
-newtype RuleAlias = RuleAlias String
-
-derive newtype instance Eq RuleAlias
-
 type LintContext =
   { packageName :: String
   , moduleName :: String
@@ -122,15 +115,13 @@ type LintExemption a =
   , appliesTo :: LintContext -> a -> Boolean
   }
 
-type GlobalExemption =
+type ModuleExemption =
   { name :: String
   , appliesTo :: LintContext -> Boolean
   }
 
 type Guarded a =
   { exemptions :: Array (LintExemption a), check :: LintContext -> a -> LintResult a }
-
-type Scope = { excludeRules :: Array RuleAlias, context :: LintContext }
 
 skipWhen :: ∀ a. Guarded a -> LintContext -> a -> LintResult a
 skipWhen { exemptions, check } context value =
@@ -163,85 +154,74 @@ dedent raw =
 
 class RuleOptions r where
   disabled :: Boolean -> r -> r
-  name :: RuleAlias -> r -> r
 
 class HasExclude r a | r -> a where
   exclude :: Array (LintExemption a) -> r -> r
 
 class RuleLike r a | r -> a where
-  ruleName :: r -> Maybe RuleAlias
   ruleDisabled :: r -> Boolean
   ruleExclude :: r -> Array (LintExemption a)
   ruleCheck :: r -> LintContext -> a -> LintResult a
 
 newtype ModuleRule = ModuleRule
-  { name :: Maybe RuleAlias
-  , exclude :: Array (LintExemption (CST.Module Void))
+  { exclude :: Array (LintExemption (CST.Module Void))
   , disabled :: Boolean
   , rule :: ModuleLint
   }
 
 perModule :: ModuleLint -> ModuleRule
 perModule check =
-  ModuleRule { name: Nothing, exclude: [], disabled: false, rule: check }
+  ModuleRule { exclude: [], disabled: false, rule: check }
 
 instance RuleOptions ModuleRule where
   disabled d (ModuleRule r) = ModuleRule (r { disabled = d })
-  name n (ModuleRule r) = ModuleRule (r { name = Just n })
 
 instance HasExclude ModuleRule (CST.Module Void) where
   exclude ex (ModuleRule r) = ModuleRule (r { exclude = ex })
 
 instance RuleLike ModuleRule (CST.Module Void) where
-  ruleName (ModuleRule r) = r.name
   ruleDisabled (ModuleRule r) = r.disabled
   ruleExclude (ModuleRule r) = r.exclude
   ruleCheck (ModuleRule r) = r.rule.rule
 
 newtype DeclarationRule = DeclarationRule
-  { name :: Maybe RuleAlias
-  , exclude :: Array (LintExemption (CST.Declaration Void))
+  { exclude :: Array (LintExemption (CST.Declaration Void))
   , disabled :: Boolean
   , rule :: DeclarationLint
   }
 
 perDecl :: DeclarationLint -> DeclarationRule
 perDecl check =
-  DeclarationRule { name: Nothing, exclude: [], disabled: false, rule: check }
+  DeclarationRule { exclude: [], disabled: false, rule: check }
 
 instance RuleOptions DeclarationRule where
   disabled d (DeclarationRule r) = DeclarationRule (r { disabled = d })
-  name n (DeclarationRule r) = DeclarationRule (r { name = Just n })
 
 instance HasExclude DeclarationRule (CST.Declaration Void) where
   exclude ex (DeclarationRule r) = DeclarationRule (r { exclude = ex })
 
 instance RuleLike DeclarationRule (CST.Declaration Void) where
-  ruleName (DeclarationRule r) = r.name
   ruleDisabled (DeclarationRule r) = r.disabled
   ruleExclude (DeclarationRule r) = r.exclude
   ruleCheck (DeclarationRule r) = r.rule.rule
 
 newtype ExprRule = ExprRule
-  { name :: Maybe RuleAlias
-  , exclude :: Array (LintExemption (CST.Expr Void))
+  { exclude :: Array (LintExemption (CST.Expr Void))
   , disabled :: Boolean
   , rule :: ExprLint
   }
 
 perExpr :: ExprLint -> ExprRule
 perExpr check =
-  ExprRule { name: Nothing, exclude: [], disabled: false, rule: check }
+  ExprRule { exclude: [], disabled: false, rule: check }
 
 instance RuleOptions ExprRule where
   disabled d (ExprRule r) = ExprRule (r { disabled = d })
-  name n (ExprRule r) = ExprRule (r { name = Just n })
 
 instance HasExclude ExprRule (CST.Expr Void) where
   exclude ex (ExprRule r) = ExprRule (r { exclude = ex })
 
 instance RuleLike ExprRule (CST.Expr Void) where
-  ruleName (ExprRule r) = r.name
   ruleDisabled (ExprRule r) = r.disabled
   ruleExclude (ExprRule r) = r.exclude
   ruleCheck (ExprRule r) = r.rule.rule
@@ -249,12 +229,11 @@ instance RuleLike ExprRule (CST.Expr Void) where
 type RuleOutcome a = { result :: a, fixed :: Boolean, violations :: Array String }
 
 -- | Uses `skipWhen`.
-runRules :: ∀ r a. RuleLike r a => Scope -> Array r -> a -> RuleOutcome a
-runRules { excludeRules, context } rules initial =
+runRules :: ∀ r a. RuleLike r a => LintContext -> Array r -> a -> RuleOutcome a
+runRules context rules initial =
   let
     applyOne acc r
       | ruleDisabled r = acc
-      | Just n <- ruleName r, n `Array.elem` excludeRules = acc
       | otherwise =
           case skipWhen { exemptions: ruleExclude r, check: ruleCheck r } context acc.result of
             Passed -> acc

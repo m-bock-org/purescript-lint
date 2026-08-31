@@ -1,4 +1,4 @@
-module PureScript.Lint (LintRun, runLinter) where
+module PureScript.Lint (LintOptions, runLinter, runLinterWith) where
 
 import Prelude
 
@@ -22,20 +22,24 @@ import PureScript.CST.Types
   , ModuleName(..)
   , Name(..)
   ) as CST
-import PureScript.Lint.Rule (ExprRule, GlobalExemption, LintContext, RuleAlias, RuleOutcome, runRules)
+import PureScript.Lint.Rule (ExprRule, LintContext, ModuleExemption, RuleOutcome, runRules)
 import PureScript.Lint.Rule.Survey (PackageSurvey, SurveyModule, runSurveyRules)
 import PureScript.Lint.RuleSet (FlatRules, Rule, flattenRules)
 import PureScript.Lint.Workspace (Workspace, WorkspaceModule)
 import PureScript.Lint.Workspace as Workspace
 
 -- | Uses `printWorkspace`, `ruleCount`, `lintModule`, `reportSurvey`.
-runLinter :: LintRun -> Aff Int
-runLinter { excludeRules, globalExclude, rules } = do
+runLinter :: Array Rule -> Aff Int
+runLinter = runLinterWith { skipModules: [] }
+
+-- | Uses `printWorkspace`, `ruleCount`, `lintModule`, `reportSurvey`.
+runLinterWith :: LintOptions -> Array Rule -> Aff Int
+runLinterWith { skipModules } rules = do
   workspace <- Workspace.getWorkspace
   printWorkspace workspace
   let
     flatRules = flattenRules rules
-    configured = { excludeRules, globalExclude, flatRules }
+    configured = { skipModules, flatRules }
   log $ fold [ "Linter: ", show (ruleCount flatRules), " rule(s)" ]
   scanned <- for workspace.packages \pkg -> do
     perModule <- for pkg.modules (lintModule configured pkg.name)
@@ -48,12 +52,12 @@ runLinter { excludeRules, globalExclude, rules } = do
 
 -- | Private. Used only by `runLinter`.
 reportSurvey :: Configured -> Array PackageSurvey -> Aff Int
-reportSurvey { excludeRules, flatRules } surveys = do
+reportSurvey { flatRules } surveys = do
   let
     forPackage s = map (append (s.packageName <> ": "))
-      (runSurveyRules excludeRules flatRules.packages s)
+      (runSurveyRules flatRules.packages s)
     perPackage = Array.concatMap forPackage surveys
-    perWorkspace = runSurveyRules excludeRules flatRules.workspaces { packages: surveys }
+    perWorkspace = runSurveyRules flatRules.workspaces { packages: surveys }
     findings = perPackage <> perWorkspace
   for_ findings \msg -> log ("  " <> msg)
   pure (Array.length findings)
@@ -66,18 +70,11 @@ ruleCount flatRules = Array.length flatRules.modules
   + Array.length flatRules.packages
   + Array.length flatRules.workspaces
 
--- | What one run of the linter is: the rules to run, plus the two ways
--- | of not running them. `excludeRules` names rules to skip outright;
--- | `globalExclude` names files no rule should see.
-type LintRun =
-  { rules :: Array Rule
-  , excludeRules :: Array RuleAlias
-  , globalExclude :: Array GlobalExemption
-  }
+-- | `skipModules` names modules no rule should see at all.
+type LintOptions = { skipModules :: Array ModuleExemption }
 
 type Configured =
-  { excludeRules :: Array RuleAlias
-  , globalExclude :: Array GlobalExemption
+  { skipModules :: Array ModuleExemption
   , flatRules :: FlatRules
   }
 
@@ -85,7 +82,7 @@ type ModuleScan = { surveyed :: SurveyModule, violations :: Int }
 
 -- | Private. Used only by `runLinter`. Uses `moduleNameOf`, `rewriteDecls`, `lintExprsInDecl`.
 lintModule :: Configured -> String -> WorkspaceModule -> Aff ModuleScan
-lintModule { excludeRules, globalExclude, flatRules } packageName workspaceModule = do
+lintModule { skipModules, flatRules } packageName workspaceModule = do
   original <- Workspace.readModule workspaceModule
   let
     context :: LintContext
@@ -98,15 +95,15 @@ lintModule { excludeRules, globalExclude, flatRules } packageName workspaceModul
       }
     surveyed =
       { moduleName: context.moduleName, path: context.path, kind: context.kind }
-  if Array.any (\g -> g.appliesTo context) globalExclude then
+  if Array.any (\g -> g.appliesTo context) skipModules then
     pure { surveyed, violations: 0 }
   else do
     let
-      afterModules = runRules { excludeRules, context } flatRules.modules original
+      afterModules = runRules context flatRules.modules original
       afterDeclarations = rewriteDecls context afterModules.result
-        (\ctx -> runRules { excludeRules, context: ctx } flatRules.declarations)
+        (\ctx -> runRules ctx flatRules.declarations)
       afterExpressions = rewriteDecls context afterDeclarations.result
-        (lintExprsInDecl { excludeRules, exprRules: flatRules.expressions })
+        (lintExprsInDecl flatRules.expressions)
       violations = afterModules.violations <> afterDeclarations.violations <>
         afterExpressions.violations
       fixed = afterModules.fixed || afterDeclarations.fixed || afterExpressions.fixed
@@ -148,15 +145,13 @@ rewriteDecls context (CST.Module moduleFields) perDeclaration =
 type ExprLintState = { violations :: Array String, fixed :: Boolean }
 
 -- | Private, depth 2. Used only by `lintModule`.
-type ExprPass = { excludeRules :: Array RuleAlias, exprRules :: Array ExprRule }
-
 -- | Private, depth 2. Used only by `lintModule`.
-lintExprsInDecl :: ExprPass -> LintContext -> CST.Declaration Void -> RuleOutcome (CST.Declaration Void)
-lintExprsInDecl { excludeRules, exprRules } context decl =
+lintExprsInDecl :: Array ExprRule -> LintContext -> CST.Declaration Void -> RuleOutcome (CST.Declaration Void)
+lintExprsInDecl exprRules context decl =
   let
     applyExprRules :: CST.Expr Void -> State ExprLintState (CST.Expr Void)
     applyExprRules expr = do
-      let exprResult = runRules { excludeRules, context } exprRules expr
+      let exprResult = runRules context exprRules expr
       modify_ \s -> s
         { violations = s.violations <> exprResult.violations
         , fixed = s.fixed || exprResult.fixed

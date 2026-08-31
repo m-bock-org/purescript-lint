@@ -17,15 +17,14 @@ module PureScript.Lint.Rule.Survey
   , surveyCheck
   , surveyDisabled
   , surveyExclude
-  , surveyName
   ) where
 
 import Prelude
 
-import Data.Array (any, concatMap, elem, filter) as Array
-import Data.Maybe (Maybe(..))
+import Data.Array (any, concatMap, filter) as Array
+import Data.Maybe (Maybe)
 import Node.Path (FilePath)
-import PureScript.Lint.Rule (class RuleOptions, RuleAlias, RuleName)
+import PureScript.Lint.Rule (class RuleOptions, RuleName)
 import PureScript.Lint.Workspace (ModuleKind)
 
 type SurveyModule = { moduleName :: String, path :: FilePath, kind :: ModuleKind }
@@ -59,37 +58,33 @@ type WorkspaceLint =
   }
 
 newtype PackageRule = PackageRule
-  { name :: Maybe RuleAlias
-  , exclude :: Array PageExemption
+  { exclude :: Array PageExemption
   , disabled :: Boolean
   , rule :: PackageLint
   }
 
 perPackage :: PackageLint -> PackageRule
 perPackage check =
-  PackageRule { name: Nothing, exclude: [], disabled: false, rule: check }
+  PackageRule { exclude: [], disabled: false, rule: check }
 
 instance RuleOptions PackageRule where
   disabled d (PackageRule r) = PackageRule (r { disabled = d })
-  name n (PackageRule r) = PackageRule (r { name = Just n })
 
 instance HasPageExclude PackageRule where
   excludePages ex (PackageRule r) = PackageRule (r { exclude = ex })
 
 newtype WorkspaceRule = WorkspaceRule
-  { name :: Maybe RuleAlias
-  , exclude :: Array PageExemption
+  { exclude :: Array PageExemption
   , disabled :: Boolean
   , rule :: WorkspaceLint
   }
 
 perWorkspace :: WorkspaceLint -> WorkspaceRule
 perWorkspace check =
-  WorkspaceRule { name: Nothing, exclude: [], disabled: false, rule: check }
+  WorkspaceRule { exclude: [], disabled: false, rule: check }
 
 instance RuleOptions WorkspaceRule where
   disabled d (WorkspaceRule r) = WorkspaceRule (r { disabled = d })
-  name n (WorkspaceRule r) = WorkspaceRule (r { name = Just n })
 
 instance HasPageExclude WorkspaceRule where
   excludePages ex (WorkspaceRule r) = WorkspaceRule (r { exclude = ex })
@@ -98,30 +93,26 @@ class HasPageExclude r where
   excludePages :: Array PageExemption -> r -> r
 
 class SurveyLike r s | r -> s where
-  surveyName :: r -> Maybe RuleAlias
   surveyDisabled :: r -> Boolean
   surveyExclude :: r -> Array PageExemption
   surveyCheck :: r -> s -> Array SurveyFinding
 
 instance SurveyLike PackageRule PackageSurvey where
-  surveyName (PackageRule r) = r.name
   surveyDisabled (PackageRule r) = r.disabled
   surveyExclude (PackageRule r) = r.exclude
   surveyCheck (PackageRule r) = r.rule.rule
 
 instance SurveyLike WorkspaceRule WorkspaceSurvey where
-  surveyName (WorkspaceRule r) = r.name
   surveyDisabled (WorkspaceRule r) = r.disabled
   surveyExclude (WorkspaceRule r) = r.exclude
   surveyCheck (WorkspaceRule r) = r.rule.rule
 
 -- | Uses `kept`.
-runSurveyRules :: ∀ r s. SurveyLike r s => Array RuleAlias -> Array r -> s -> Array String
-runSurveyRules excludeRules rules survey =
+runSurveyRules :: ∀ r s. SurveyLike r s => Array r -> s -> Array String
+runSurveyRules rules survey =
   let
     applyOne r
       | surveyDisabled r = []
-      | Just n <- surveyName r, n `Array.elem` excludeRules = []
       | otherwise = map _.message (Array.filter (kept r) (surveyCheck r survey))
   in
     Array.concatMap applyOne rules

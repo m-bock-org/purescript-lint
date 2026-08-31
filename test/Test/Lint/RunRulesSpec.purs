@@ -11,12 +11,10 @@ import PureScript.Lint.Rule
   ( LintContext
   , ModuleLint
   , ModuleRule
-  , RuleAlias(..)
   , RuleName(..)
   , disabled
   , exclude
   , fixed
-  , name
   , perModule
   , runRules
   , violation
@@ -98,40 +96,26 @@ spec = describe "runRules" do
 
   it "collects a rule's violation" do
     let
-      outcome = runRules { excludeRules: [], context }
+      outcome = runRules context
         [ perModule alwaysViolates ]
         sampleModule
     outcome.violations `shouldEqual` [ "nope" ]
     outcome.fixed `shouldEqual` false
 
   it "reports nothing when no rule fires" do
-    let outcome = runRules { excludeRules: [], context } ([] :: Array ModuleRule) sampleModule
+    let outcome = runRules context ([] :: Array ModuleRule) sampleModule
     Array.length outcome.violations `shouldEqual` 0
 
   it "skips a disabled rule" do
     let
-      outcome = runRules { excludeRules: [], context }
+      outcome = runRules context
         [ disabled true (perModule alwaysViolates) ]
         sampleModule
     outcome.violations `shouldEqual` []
 
-  it "skips a rule whose alias is excluded" do
-    let
-      outcome = runRules { excludeRules: [ RuleAlias "skip-me" ], context }
-        [ name (RuleAlias "skip-me") (perModule alwaysViolates) ]
-        sampleModule
-    outcome.violations `shouldEqual` []
-
-  it "runs a named rule that was not excluded" do
-    let
-      outcome = runRules { excludeRules: [ RuleAlias "other" ], context }
-        [ name (RuleAlias "skip-me") (perModule alwaysViolates) ]
-        sampleModule
-    outcome.violations `shouldEqual` [ "nope" ]
-
   it "skips a rule whose exemption applies" do
     let
-      outcome = runRules { excludeRules: [], context }
+      outcome = runRules context
         [ exclude [ { name: "by design", appliesTo: \_ _ -> true } ]
             (perModule alwaysViolates)
         ]
@@ -140,7 +124,7 @@ spec = describe "runRules" do
 
   it "runs a rule whose exemption does not apply" do
     let
-      outcome = runRules { excludeRules: [], context }
+      outcome = runRules context
         [ exclude [ { name: "by design", appliesTo: \_ _ -> false } ]
             (perModule alwaysViolates)
         ]
@@ -149,7 +133,7 @@ spec = describe "runRules" do
 
   it "marks the outcome fixed when a rule rewrites" do
     let
-      outcome = runRules { excludeRules: [], context }
+      outcome = runRules context
         [ perModule alwaysFixes ]
         sampleModule
     outcome.fixed `shouldEqual` true
@@ -157,21 +141,21 @@ spec = describe "runRules" do
 
   it "reports every finding a rule made, not just the first" do
     let
-      outcome = runRules { excludeRules: [], context }
+      outcome = runRules context
         [ perModule manyFindings ]
         sampleModule
     outcome.violations `shouldEqual` [ "first", "second", "third" ]
 
   it "passes when a rule finds nothing" do
     let
-      outcome = runRules { excludeRules: [], context }
+      outcome = runRules context
         [ perModule findsNothing ]
         sampleModule
     outcome.violations `shouldEqual` []
 
   it "attaches a hint to every finding, not just the first" do
     let
-      outcome = runRules { excludeRules: [], context }
+      outcome = runRules context
         [ perModule hinted ]
         sampleModule
     outcome.violations `shouldEqual`
@@ -179,7 +163,7 @@ spec = describe "runRules" do
 
   it "runs every rule, not just the first to fire" do
     let
-      outcome = runRules { excludeRules: [], context }
+      outcome = runRules context
         [ perModule alwaysViolates, perModule alwaysViolates ]
         sampleModule
     outcome.violations `shouldEqual` [ "nope", "nope" ]
