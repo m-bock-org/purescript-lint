@@ -216,7 +216,6 @@ Run it from a Spago project directory.
 
 Grouped by the rule that fired: what the rule wants, then every place it
 was not met. A rule explains itself once, however many things it found.
-This is `maxFunctionArity 2`, the rule above, run over another package.
 
 ```
 max-function-arity
@@ -224,13 +223,13 @@ max-function-arity
     good  resize { width, height } img = ...
     bad   resize width height quality img = ...
 
-  Data.Json.Decode.Sum
-    lookupCase takes 3 args
+  MyApp.Image
+    resize takes 4 args
 
-  Data.Json.Encode.Sum
-    encodeSumCase takes 3 args
+  MyApp.Layout
+    place takes 5 args
 
-2 findings in 2 of 13 modules
+2 findings in 2 of 9 modules
 ```
 
 ## Working on it
@@ -245,9 +244,9 @@ Then, with `node_modules/.bin` on `PATH` (which the `justfile` does for
 you):
 
 ```
-just build    # spago build --strict
-just test     # spago test
-just check    # both, plus a check that the README is in sync with the source
+just build
+just test
+just check
 ```
 
 ## Contributing
