@@ -42,6 +42,12 @@ workspace:
     codec-argonaut:
       git: https://github.com/garyb/purescript-codec-argonaut.git
       ref: dc287c83b79f86f8d9a0045dcb740f0cf9d23ccd
+      # This list is here because codec-argonaut predates spago.yaml -
+      # it ships a bower.json and nothing else, so spago cannot read its
+      # dependencies and they have to be restated. Every other entry
+      # above and below has its own spago.yaml, which is why none of
+      # them needs one.
+      #
       # Its own bower.json names six of these; the rest are imports it
       # makes without declaring. A whole-workspace build never noticed,
       # because something else always pulled them in.
@@ -73,19 +79,3 @@ workspace:
     encode-decode:
       git: https://github.com/m-bock/purescript-encode-decode.git
       ref: 07a361b0e42314ee6521b8ccc774eca117be57d0
-      dependencies:
-        - argonaut-core
-        - argonaut-codecs
-        - arrays
-        - contravariant
-        - either
-        - foldable-traversable
-        - foreign-object
-        - heterogeneous
-        - maybe
-        - ordered-collections
-        - prelude
-        - record
-        - transformers
-        - tuples
-        - typelevel-prelude

@@ -617,24 +617,7 @@
       },
       "encode-decode": {
         "git": "https://github.com/m-bock/purescript-encode-decode.git",
-        "ref": "07a361b0e42314ee6521b8ccc774eca117be57d0",
-        "dependencies": [
-          "argonaut-codecs",
-          "argonaut-core",
-          "arrays",
-          "contravariant",
-          "either",
-          "foldable-traversable",
-          "foreign-object",
-          "heterogeneous",
-          "maybe",
-          "ordered-collections",
-          "prelude",
-          "record",
-          "transformers",
-          "tuples",
-          "typelevel-prelude"
-        ]
+        "ref": "07a361b0e42314ee6521b8ccc774eca117be57d0"
       },
       "patchdown": {
         "git": "https://github.com/m-bock/purescript-patchdown.git",
@@ -977,9 +960,8 @@
         "ordered-collections",
         "prelude",
         "record",
-        "transformers",
-        "tuples",
-        "typelevel-prelude"
+        "strings",
+        "tuples"
       ]
     },
     "enums": {
