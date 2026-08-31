@@ -77,62 +77,6 @@ full = quick <> Rules.do
 
 `group` is presentation only - it names a section in the output.
 
-## Writing a rule
-
-A rule is a value, so a new one is a module that exports a record. Here
-is a whole rule, start to finish - it flags a top-level binding named
-with a single letter:
-
-```purescript
-module MyRules.NoSingleLetterName (noSingleLetterName) where
-
-import Prelude
-
-import Data.Maybe (Maybe(..))
-import Data.String (length) as String
-import PureScript.CST.Types (Declaration(..), Ident(..), Name(..))
-import PureScript.Lint.Rule (DeclarationLint, LintResult(..), RuleName(..))
-
-noSingleLetterName :: DeclarationLint
-noSingleLetterName =
-  { name: RuleName "no-single-letter-name"
-  , description: "Flags a top-level binding whose name is a single character."
-  , goodExample: Just "count = 3"
-  , badExample: Just "n = 3"
-  , rule: \_context decl -> case decl of
-      DeclValue { name: Name { name: Ident ident } }
-        | String.length ident == 1 ->
-            Violation ("top-level `" <> ident <> "` needs a name, not a letter")
-      _ -> Passed
-  }
-```
-
-That is all of it. There is no registration step and no manifest - you
-put it in your rule set and it runs:
-
-```purescript
-group "Naming" Rules.do
-  rule $ perDecl noSingleLetterName
-```
-
-Three things are worth knowing before you write your own.
-
-**Pick the smallest scope that can see the answer.** The type you choose
-- `DeclarationLint`, `ExprLint`, `ModuleLint` - decides what your
-function is handed and how often it runs. A rule that only needs one
-declaration should not ask for the module.
-
-**Return `Fixed` only when no judgment is left.** `Passed`, `Violation
-String` and `ViolationWithHint` all leave the decision with a person.
-`Fixed` hands back rewritten syntax and the caller applies it, so the bar
-is that there is exactly one right answer - `unicodeForall` qualifies,
-`maxFunctionArity` never could.
-
-**Write the `## Context` block.** Every rule in the rule set ends with a
-trailing comment saying why it exists and what it trades away. A rule
-that cannot justify itself in a paragraph usually should not be a rule -
-and the paragraph is what a reader hits when the rule fires on them.
-
 ## Running it
 
 ```purescript
