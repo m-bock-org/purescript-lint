@@ -113,7 +113,7 @@ printByRule located =
         sharedHint = if Array.length hints == 1 then Array.head hints else Nothing
       log ""
       log
-        ( "▸ " <> String.joinWith " » "
+        ( "● " <> String.joinWith " » "
             (Array.snoc (NEA.head group).finding.groups rule.name)
         )
       log ("    " <> rule.description)
@@ -132,7 +132,8 @@ printSummary :: Int -> Int -> Int -> Aff Unit
 printSummary total withFindings moduleCount = do
   log ""
   log $ fold
-    [ show total
+    [ "Summary: "
+    , show total
     , if total == 1 then " finding in " else " findings in "
     , show withFindings
     , " of "

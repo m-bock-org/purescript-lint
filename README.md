@@ -201,10 +201,13 @@ generatedCode =
 
 <!-- PD_END -->
 
-There are three scopes. `exclude` skips one value for one rule, as above.
-`excludeSubjects` does the same for a survey rule's findings. And
-`runLinterWith { skipModules }` skips a module for every rule at once,
-which is the cheaper one - it is decided before any rule runs.
+There are three. Two decide before a check runs, one decides after.
+
+`exclude` and `runLinterWith { skipModules }` both decide *before* a
+check runs - one value for one rule, or every rule for a whole module.
+`ignoreSubjects` decides *after*: a survey rule is handed the workspace
+in one go, so its findings can only be dropped once made, by what each
+one is about.
 
 ## Running it
 
@@ -246,7 +249,7 @@ Grouped by the rule that fired: what the rule wants, then every place it
 was not met. A rule explains itself once, however many things it found.
 
 ```
-▸ Declarations » max-function-arity
+● Declarations » max-function-arity
     Flags a function with more arguments than allowed.
       good  resize { width, height } img = ...
       bad   resize width height img = ...
@@ -257,7 +260,7 @@ was not met. A rule explains itself once, however many things it found.
   ◦ MyApp.Layout
       place takes 5 args
 
-2 findings in 2 of 9 modules
+Summary: 2 findings in 2 of 9 modules
 ```
 
 ## Working on it

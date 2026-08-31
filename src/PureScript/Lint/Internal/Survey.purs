@@ -2,15 +2,16 @@ module PureScript.Lint.Internal.Survey
   ( PackageLint
   , PackageRule
   , PackageSurvey
+  , Subject(..)
   , SubjectExemption
   , SurveyFinding
   , SurveyModule
   , WorkspaceLint
   , WorkspaceRule
   , WorkspaceSurvey
-  , class HasSubjectExclude
+  , class HasSubjectIgnore
   , class SurveyLike
-  , excludeSubjects
+  , ignoreSubjects
   , perPackage
   , perWorkspace
   , runSurveyRules
@@ -29,13 +30,29 @@ import PureScript.Lint.Internal.Rule (class RuleOptions, Grouped, ModuleKind)
 -- | One module, as a survey sees it: where it is, not what is in it.
 type SurveyModule = { moduleName :: String, path :: FilePath, kind :: ModuleKind }
 
--- | One finding, and what it is about - the module, namespace or
--- | package the survey rule is complaining of.
-type SurveyFinding = { subject :: String, message :: String }
+-- | What a survey rule is complaining about.
+data Subject
+  = Namespace String
+  | Package String
+  | Module String
 
--- | A named reason a survey rule should ignore findings about a
--- | particular subject.
-type SubjectExemption = { name :: String, appliesTo :: String -> Boolean }
+derive instance eqSubject :: Eq Subject
+
+instance showSubject :: Show Subject where
+  show = case _ of
+    Namespace n -> n
+    Package n -> n
+    Module n -> n
+
+-- | One finding, and what it is about.
+type SurveyFinding = { subject :: Subject, message :: String }
+
+-- | A named reason a survey rule's findings about some subject should
+-- | be dropped. Unlike `exclude`, which stops a rule seeing a value at
+-- | all, this runs after the rule has looked: a survey rule is handed
+-- | the whole workspace at once, so its findings can only be filtered
+-- | once made.
+type SubjectExemption = { name :: String, appliesTo :: Subject -> Boolean }
 
 -- | One package's modules, for a rule that reasons about a package.
 type PackageSurvey =
@@ -80,8 +97,8 @@ perPackage check =
 instance RuleOptions PackageRule where
   disabled d (PackageRule r) = PackageRule (r { disabled = d })
 
-instance HasSubjectExclude PackageRule where
-  excludeSubjects ex (PackageRule r) = PackageRule (r { exclude = ex })
+instance HasSubjectIgnore PackageRule where
+  ignoreSubjects ex (PackageRule r) = PackageRule (r { exclude = ex })
 
 -- | A workspace rule with its options applied.
 newtype WorkspaceRule = WorkspaceRule
@@ -98,14 +115,14 @@ perWorkspace check =
 instance RuleOptions WorkspaceRule where
   disabled d (WorkspaceRule r) = WorkspaceRule (r { disabled = d })
 
-instance HasSubjectExclude WorkspaceRule where
-  excludeSubjects ex (WorkspaceRule r) = WorkspaceRule (r { exclude = ex })
+instance HasSubjectIgnore WorkspaceRule where
+  ignoreSubjects ex (WorkspaceRule r) = WorkspaceRule (r { exclude = ex })
 
 -- | Attaching exemptions to a survey rule.
-class HasSubjectExclude r where
-  -- | Give a survey rule reasons to ignore findings about particular
--- | subjects.
-  excludeSubjects :: Array SubjectExemption -> r -> r
+class HasSubjectIgnore r where
+  -- | Give a survey rule reasons to drop findings about particular
+-- | subjects, after it has made them.
+  ignoreSubjects :: Array SubjectExemption -> r -> r
 
 -- | What the runner needs of a survey rule, at either scope.
 class SurveyLike r s | r -> s where
