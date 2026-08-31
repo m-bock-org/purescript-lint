@@ -246,15 +246,15 @@ Grouped by the rule that fired: what the rule wants, then every place it
 was not met. A rule explains itself once, however many things it found.
 
 ```
-● Declarations / max-function-arity
+▸ Declarations » max-function-arity
     Flags a function with more arguments than allowed.
       good  resize { width, height } img = ...
       bad   resize width height img = ...
 
-  • MyApp.Image
+  ◦ MyApp.Image
       resize takes 3 args
 
-  • MyApp.Layout
+  ◦ MyApp.Layout
       place takes 5 args
 
 2 findings in 2 of 9 modules
