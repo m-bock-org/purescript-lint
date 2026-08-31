@@ -1,0 +1,7 @@
+{
+  "recommendations": [
+    "nwolverson.ide-purescript",
+    "nwolverson.language-purescript",
+    "jnoortheen.nix-ide"
+  ]
+}

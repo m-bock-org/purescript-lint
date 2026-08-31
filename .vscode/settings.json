@@ -1,0 +1,16 @@
+{
+  // Everything here points at .vscode/<tool>, which runs the tool inside
+  // this repo's dev shell. Without it the extension picks up a globally
+  // installed purs or one from node_modules, which is a different
+  // compiler from the one the build uses.
+  "purescript.pursExe": "${workspaceFolder}/.vscode/purs",
+  "purescript.buildCommand": "${workspaceFolder}/.vscode/spago build --purs-args --json-errors",
+  "purescript.formatter": "purs-tidy",
+  "purescript.pursTidyExe": "${workspaceFolder}/.vscode/purs-tidy",
+
+  // The npm bin directory holds a second purs and a second spago whose
+  // versions are pinned in package.json, not in the flake. Keeping it
+  // off the extension's PATH is the point of the wrappers above.
+  "purescript.addNpmPath": false,
+  "purescript.addSpagoSources": true
+}
