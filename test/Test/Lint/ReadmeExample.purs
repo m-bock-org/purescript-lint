@@ -10,6 +10,7 @@ module Test.Lint.ReadmeExample
 import Prelude
 
 import Data.Array as Array
+import Data.Maybe (Maybe(..))
 import Data.String (Pattern(..), contains)
 import PureScript.CST.Types (Declaration(..), Ident(..), Name(..))
 import PureScript.CST.Types (Declaration) as CST
@@ -26,8 +27,9 @@ maxFunctionArity :: Int -> DeclarationLint
 maxFunctionArity maxArity =
   { name: "max-function-arity"
   , description: "Flags a function with more arguments than allowed."
-  , goodExamples: [ "resize { width, height } img = ..." ]
-  , badExamples: [ "resize width height img = ..." ]
+  , goodExamples: [ "resize { width, height } img = img" ]
+  , badExamples: [ "resize width height quality img = img" ]
+  , exampleConfig: Just ("maxFunctionArity " <> show maxArity)
   , rule: \_context decl -> case decl of
       DeclValue { name: Name { name: Ident n }, binders }
         | Array.length binders > maxArity ->
@@ -38,10 +40,10 @@ maxFunctionArity maxArity =
 
 -- | The same rule, with and without an exemption.
 arityRule :: DeclarationRule
-arityRule = perDecl (maxFunctionArity 4)
+arityRule = perDecl (maxFunctionArity 3)
 
 arityUnlessGenerated :: DeclarationRule
-arityUnlessGenerated = exclude [ generatedCode ] (perDecl (maxFunctionArity 4))
+arityUnlessGenerated = exclude [ generatedCode ] (perDecl (maxFunctionArity 3))
 
 generatedCode :: LintExemption (CST.Declaration Void)
 generatedCode =

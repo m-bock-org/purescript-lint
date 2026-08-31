@@ -100,6 +100,7 @@ type ModuleLint =
   , description :: String
   , goodExamples :: Array String
   , badExamples :: Array String
+  , exampleConfig :: Maybe String
   , rule :: LintContext -> CST.Module Void -> LintResult (CST.Module Void)
   }
 
@@ -109,6 +110,7 @@ type DeclarationLint =
   , description :: String
   , goodExamples :: Array String
   , badExamples :: Array String
+  , exampleConfig :: Maybe String
   , rule :: LintContext -> CST.Declaration Void -> LintResult (CST.Declaration Void)
   }
 
@@ -118,6 +120,7 @@ type ExprLint =
   , description :: String
   , goodExamples :: Array String
   , badExamples :: Array String
+  , exampleConfig :: Maybe String
   , rule :: LintContext -> CST.Expr Void -> LintResult (CST.Expr Void)
   }
 
@@ -220,6 +223,7 @@ instance RuleLike ModuleRule (CST.Module Void) where
     , description: r.rule.description
     , goodExamples: r.rule.goodExamples
     , badExamples: r.rule.badExamples
+    , exampleConfig: r.rule.exampleConfig
     }
 
 -- | A declaration rule with its options applied.
@@ -249,6 +253,7 @@ instance RuleLike DeclarationRule (CST.Declaration Void) where
     , description: r.rule.description
     , goodExamples: r.rule.goodExamples
     , badExamples: r.rule.badExamples
+    , exampleConfig: r.rule.exampleConfig
     }
 
 -- | An expression rule with its options applied.
@@ -279,6 +284,7 @@ instance RuleLike ExprRule (CST.Expr Void) where
     , description: r.rule.description
     , goodExamples: r.rule.goodExamples
     , badExamples: r.rule.badExamples
+    , exampleConfig: r.rule.exampleConfig
     }
 
 -- | A rule's own description of itself, carried alongside anything it
@@ -288,6 +294,7 @@ type RuleInfo =
   , description :: String
   , goodExamples :: Array String
   , badExamples :: Array String
+  , exampleConfig :: Maybe String
   }
 
 -- | A rule, and the groups it was written under.

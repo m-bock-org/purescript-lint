@@ -104,8 +104,9 @@ maxFunctionArity :: Int -> DeclarationLint
 maxFunctionArity maxArity =
   { name: "max-function-arity"
   , description: "Flags a function with more arguments than allowed."
-  , goodExamples: [ "resize { width, height } img = ..." ]
-  , badExamples: [ "resize width height img = ..." ]
+  , goodExamples: [ "resize { width, height } img = img" ]
+  , badExamples: [ "resize width height quality img = img" ]
+  , exampleConfig: Just ("maxFunctionArity " <> show maxArity)
   , rule: \_context decl -> case decl of
       DeclValue { name: Name { name: Ident n }, binders }
         | Array.length binders > maxArity ->
@@ -117,8 +118,10 @@ maxFunctionArity maxArity =
 
 <!-- PD_END -->
 
-Configuration is an argument: `maxFunctionArity 4` is a rule, and
-`maxFunctionArity 6` is a different one.
+Configuration is an argument: `maxFunctionArity 3` is a rule, and
+`maxFunctionArity 6` is a different one. Examples are read against a
+setting, so `exampleConfig` says which one, and the report prints it
+beside them.
 
 <!-- PD_START:purs
 filePath: src/Lint/Internal/Rule.purs
@@ -192,7 +195,7 @@ pick:
 
 ```purescript
 arityUnlessGenerated :: DeclarationRule
-arityUnlessGenerated = exclude [ generatedCode ] (perDecl (maxFunctionArity 4))
+arityUnlessGenerated = exclude [ generatedCode ] (perDecl (maxFunctionArity 3))
 
 generatedCode :: LintExemption (CST.Declaration Void)
 generatedCode =
@@ -251,11 +254,12 @@ was not met. A rule explains itself once, however many things it found.
 ```
 ● Declarations » max-function-arity
     Flags a function with more arguments than allowed.
-      good  resize { width, height } img = ...
-      bad   resize width height img = ...
+      with  maxFunctionArity 3
+      good  resize { width, height } img = img
+      bad   resize width height quality img = img
 
   ◦ MyApp.Image
-      resize takes 3 args
+      resize takes 4 args
 
   ◦ MyApp.Layout
       place takes 5 args

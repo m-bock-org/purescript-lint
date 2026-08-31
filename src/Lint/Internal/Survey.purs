@@ -23,6 +23,7 @@ module Lint.Internal.Survey
 import Prelude
 
 import Data.Array (any, concatMap, filter) as Array
+import Data.Maybe (Maybe)
 import Node.Path (FilePath)
 import Lint.Internal.Rule (class RuleOptions, Grouped, ModuleKind)
 
@@ -69,6 +70,7 @@ type PackageLint =
   , description :: String
   , goodExamples :: Array String
   , badExamples :: Array String
+  , exampleConfig :: Maybe String
   , rule :: PackageSurvey -> Array SurveyFinding
   }
 
@@ -78,6 +80,7 @@ type WorkspaceLint =
   , description :: String
   , goodExamples :: Array String
   , badExamples :: Array String
+  , exampleConfig :: Maybe String
   , rule :: WorkspaceSurvey -> Array SurveyFinding
   }
 

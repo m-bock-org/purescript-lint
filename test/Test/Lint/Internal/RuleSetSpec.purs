@@ -2,6 +2,8 @@ module Test.Lint.Internal.RuleSetSpec (spec) where
 
 import Prelude
 
+import Data.Maybe (Maybe(..))
+
 import Data.Array (length) as Array
 import Lint.Rule
   ( DeclarationLint
@@ -22,6 +24,7 @@ noopModule =
   , description: "Passes. Only its shape matters here."
   , goodExamples: []
   , badExamples: []
+  , exampleConfig: Nothing
   , rule: \_context _value -> violations []
   }
 
@@ -31,6 +34,7 @@ noopDecl =
   , description: "Passes. Only its shape matters here."
   , goodExamples: []
   , badExamples: []
+  , exampleConfig: Nothing
   , rule: \_context _value -> violations []
   }
 
@@ -40,6 +44,7 @@ noopExpr =
   , description: "Passes. Only its shape matters here."
   , goodExamples: []
   , badExamples: []
+  , exampleConfig: Nothing
   , rule: \_context _value -> violations []
   }
 

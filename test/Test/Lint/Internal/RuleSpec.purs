@@ -50,6 +50,7 @@ alwaysViolates =
   , description: "Always fails, so a test can see what the runner does with a violation."
   , goodExamples: []
   , badExamples: []
+  , exampleConfig: Nothing
   , rule: \_context _mod -> violations [ "nope" ]
   }
 
@@ -59,6 +60,7 @@ alwaysFixes =
   , description: "Always reports a fix, without actually changing anything."
   , goodExamples: []
   , badExamples: []
+  , exampleConfig: Nothing
   , rule: \_context mod -> fixed mod
   }
 
@@ -68,6 +70,7 @@ manyFindings =
   , description: "Reports three findings at once, the way a module-level rule does."
   , goodExamples: []
   , badExamples: []
+  , exampleConfig: Nothing
   , rule: \_context _mod -> violations [ "first", "second", "third" ]
   }
 
@@ -77,6 +80,7 @@ findsNothing =
   , description: "Computes an empty list of findings, which is how a rule passes."
   , goodExamples: []
   , badExamples: []
+  , exampleConfig: Nothing
   , rule: \_context _mod -> violations []
   }
 
@@ -86,6 +90,7 @@ hinted =
   , description: "Carries a suggestion that belongs to the rule rather than to one finding."
   , goodExamples: []
   , badExamples: []
+  , exampleConfig: Nothing
   , rule: \_context _mod -> withHint "try harder" (violations [ "first", "second" ])
   }
 
