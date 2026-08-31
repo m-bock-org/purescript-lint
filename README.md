@@ -12,8 +12,7 @@ The engine ships with **no rules of its own**. A starting set lives in
 [`purescript-lint-rules`](https://github.com/m-bock/purescript-lint-rules),
 and writing your own is the expected path - see below.
 
-**Status: early.** Extracted from a private codebase where it has been in
-daily use, but the API has had exactly one consumer so far and will move.
+**Status: early.** The API has had one consumer so far and will move.
 
 ## What a rule is
 
