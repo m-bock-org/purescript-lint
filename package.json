@@ -1,21 +1,18 @@
 {
-  "name": "purescript-encode-decode",
+  "name": "purescript-lint",
   "version": "0.1.0",
-  "description": "Plain, explicit JSON encode/decode functions for PureScript - no typeclass-based decodeJson, no Codec machinery.",
-  "scripts": {
-    "test": "spago test"
-  },
+  "description": "A lint engine for PureScript source, with rules as ordinary values.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/m-bock/purescript-encode-decode.git"
+    "url": "git+https://github.com/m-bock/purescript-lint.git"
   },
   "keywords": [],
   "author": "Michael Bock",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
-    "url": "https://github.com/m-bock/purescript-encode-decode/issues"
+    "url": "https://github.com/m-bock/purescript-lint/issues"
   },
-  "homepage": "https://github.com/m-bock/purescript-encode-decode#readme",
+  "homepage": "https://github.com/m-bock/purescript-lint#readme",
   "devDependencies": {
     "purescript": "^0.15.15",
     "purs-tidy": "^0.11.0",

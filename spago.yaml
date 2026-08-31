@@ -14,6 +14,8 @@ package:
     - effect
     - either
     - encode-decode
+    - foldable-traversable
+    - foreign-object
     - language-cst-parser
     - maybe
     - node-buffer
@@ -21,6 +23,7 @@ package:
     - node-fs
     - node-glob-basic
     - node-path
+    - ordered-collections
     - prelude
     - strings
     - transformers

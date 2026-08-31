@@ -8,9 +8,12 @@ It reads a Spago workspace, parses each module with
 [`language-cst-parser`](https://github.com/natefaubion/purescript-language-cst-parser),
 and runs your rules over the CST. Some rules can fix what they find.
 
-**Status: early.** The engine and the rules here are extracted from a
-private codebase where they have been in daily use, but the API has had
-exactly one consumer so far and will move.
+The engine ships with **no rules of its own**. A starting set lives in
+[`purescript-lint-rules`](https://github.com/m-bock/purescript-lint-rules),
+and writing your own is the expected path - see below.
+
+**Status: early.** Extracted from a private codebase where it has been in
+daily use, but the API has had exactly one consumer so far and will move.
 
 ## What a rule is
 
@@ -81,27 +84,61 @@ let one repo run a small set while iterating and the full set in CI.
 Rules can be excluded per module, with a reason attached, so an exemption
 records *why* rather than just switching something off.
 
-## Rules that ship with it
+## Writing a rule
 
-Deliberately few, and all general. The interesting ones:
+A rule is a value, so a new one is a module that exports a record. Here
+is a whole rule, start to finish - it flags a top-level binding named
+with a single letter:
 
-- **`maxCallStackDepth`** - how many of your own functions a call can pass
-  through before reaching a leaf. The only rule here that charges for
-  naming a thing, which makes it pull against every rule that rewards
-  extraction. That tension is the point: when both exits close, the
-  decomposition is usually wrong.
-- **`maxDelimiterRun`** - how many brackets may open or close in a row.
-  A blunt proxy for "this expression has too much going on".
-- **`maxLineLength`** - separate budgets for code and for signatures,
-  because a type that does not fit is usually saying something true.
-- **`sameConstructorArm`** - a branch that matches `Right` and rebuilds
-  `Right` around its result is a `map`.
-- **`noStutteringName`** - `Foo.fooBar` repeats the qualifier.
-- **`maxFunctionArity`**, **`maxDeclarationLines`**,
-  **`maxLambdaNestingDepth`**, **`unicodeForall`**.
+```purescript
+module MyRules.NoSingleLetterName (noSingleLetterName) where
 
-Every rule carries a trailing `## Context` block explaining why it exists
-and what it is trading off. Those are the real documentation.
+import Prelude
+
+import Data.Maybe (Maybe(..))
+import Data.String (length) as String
+import PureScript.CST.Types (Declaration(..), Ident(..), Name(..))
+import PureScript.Lint.Rule (DeclarationLint, LintResult(..), RuleName(..))
+
+noSingleLetterName :: DeclarationLint
+noSingleLetterName =
+  { name: RuleName "no-single-letter-name"
+  , description: "Flags a top-level binding whose name is a single character."
+  , goodExample: Just "count = 3"
+  , badExample: Just "n = 3"
+  , rule: \_context decl -> case decl of
+      DeclValue { name: Name { name: Ident ident } }
+        | String.length ident == 1 ->
+            Violation ("top-level `" <> ident <> "` needs a name, not a letter")
+      _ -> Passed
+  }
+```
+
+That is all of it. There is no registration step and no manifest - you
+put it in your rule set and it runs:
+
+```purescript
+group "Naming" Rules.do
+  rule $ perDecl noSingleLetterName
+```
+
+Three things are worth knowing before you write your own.
+
+**Pick the smallest scope that can see the answer.** The type you choose
+- `DeclarationLint`, `ExprLint`, `ModuleLint` - decides what your
+function is handed and how often it runs. A rule that only needs one
+declaration should not ask for the module.
+
+**Return `Fixed` only when no judgment is left.** `Passed`, `Violation
+String` and `ViolationWithHint` all leave the decision with a person.
+`Fixed` hands back rewritten syntax and the caller applies it, so the bar
+is that there is exactly one right answer - `unicodeForall` qualifies,
+`maxFunctionArity` never could.
+
+**Write the `## Context` block.** Every rule in the rule set ends with a
+trailing comment saying why it exists and what it trades away. A rule
+that cannot justify itself in a paragraph usually should not be a rule -
+and the paragraph is what a reader hits when the rule fires on them.
 
 ## Running it
 

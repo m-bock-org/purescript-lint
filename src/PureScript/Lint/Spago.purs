@@ -10,10 +10,10 @@ import Data.Either (Either(..))
 import Data.Json.Decode
   ( DecodeJson
   , decodeAttempt
-  , runDecodeFromString
   , decodeObjectWithKey
   , decodeString
   , printJsonDecodeError
+  , runDecodeFromString
   )
 import Data.Json.Decode.Record (decodeRecord)
 import Effect.Aff (Aff)
