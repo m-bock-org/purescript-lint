@@ -2,168 +2,168 @@
   [
     "PureScript.Lint dedent drops a leading blank line, as a triple-quoted string leaves behind",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint dedent drops a trailing blank line too",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint dedent handles a single line",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint dedent handles the empty string",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint dedent keeps relative indentation",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint dedent leaves an already-flush string alone",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint dedent measures the common prefix across all lines, not just the first",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint dedent strips the common indentation from every line",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint flattenRules concatenates two rule sets, which is how one builds on another",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint flattenRules is empty for no rules",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint flattenRules keeps a rule listed twice, twice",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint flattenRules sees through a group, which is presentation only",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint flattenRules sees through nested groups",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint flattenRules sorts each rule into the bucket for the syntax it sees",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint moduleGlob builds a glob for a package at the repo root, which spago reports as ./",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint moduleGlob builds a glob for a package nested in the repo",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint moduleGlob covers the test tree the same way",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint moduleGlob never produces a doubled separator, which matches nothing",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint runRules attaches a hint to every finding, not just the first",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint runRules collects a rule's violation",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint runRules marks the outcome fixed when a rule rewrites",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint runRules passes when a rule finds nothing",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint runRules reports every finding a rule made, not just the first",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint runRules reports nothing when no rule fires",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
@@ -177,21 +177,21 @@
   [
     "PureScript.Lint runRules runs a rule whose exemption does not apply",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint runRules runs every rule, not just the first to fire",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
   [
     "PureScript.Lint runRules skips a disabled rule",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ],
@@ -205,7 +205,7 @@
   [
     "PureScript.Lint runRules skips a rule whose exemption applies",
     {
-      "timestamp": "1788148973693.0",
+      "timestamp": "1788149098511.0",
       "success": true
     }
   ]

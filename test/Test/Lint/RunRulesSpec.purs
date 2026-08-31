@@ -7,7 +7,7 @@ import Data.Maybe (Maybe(..))
 import Partial.Unsafe (unsafeCrashWith)
 import PureScript.CST (RecoveredParserResult(..), parseModule)
 import PureScript.CST.Types (Module) as CST
-import PureScript.Lint.Rule
+import PureScript.Lint.Internal.Rule
   ( LintContext
   , ModuleKind(..)
   , ModuleLint

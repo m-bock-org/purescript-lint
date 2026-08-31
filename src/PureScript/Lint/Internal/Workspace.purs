@@ -27,17 +27,21 @@ import PureScript.CST (RecoveredParserResult(..), parseModule, printModule) as C
 import PureScript.CST.Errors (printParseError)
 import PureScript.CST.Parser.Monad (PositionedError)
 import PureScript.CST.Types (Module) as CST
+import PureScript.Lint.Internal.Rule (ModuleKind(..))
 import PureScript.Lint.Internal.Spago (SpagoPkg(..), spagoLsPackages)
-import PureScript.Lint.Rule (ModuleKind(..))
 
+-- | Every package this repo owns, as a structural map. Cheap to hold
+-- | whole; a module's CST is read separately when something needs it.
 type Workspace = { packages :: Array LocalPackage }
 
+-- | One package: its spago name, its directory, and its modules.
 type LocalPackage =
   { name :: String
   , path :: FilePath
   , modules :: Array WorkspaceModule
   }
 
+-- | Where one module is, and which tree it came from.
 type WorkspaceModule =
   { path :: FilePath
   , kind :: ModuleKind
@@ -61,6 +65,7 @@ modulesOfKind kind pattern = do
   paths <- expandGlobs "." [ pattern ]
   pure (map (\path -> { path, kind }) (Set.toUnfoldable paths))
 
+-- | Ask spago which packages this repo owns, and find their modules.
 getWorkspace :: Aff Workspace
 getWorkspace =
   let
@@ -79,6 +84,7 @@ toLocalPackage { name, path } = do
   modules <- modulesOf path
   pure { name, path, modules }
 
+-- | Parse one module, failing loudly if it does not parse.
 readModule :: WorkspaceModule -> Aff (CST.Module Void)
 readModule { path } = do
   src <- FS.readTextFile UTF8 path
@@ -102,5 +108,6 @@ printPositionedError path { position, error: err } =
     , printParseError err
     ]
 
+-- | Write a module back over its own file, after a rule rewrote it.
 writeModule :: FilePath -> CST.Module Void -> Aff Unit
 writeModule path m = FS.writeTextFile UTF8 path (CST.printModule m)

@@ -8,8 +8,8 @@ module PureScript.Lint.Internal.RuleSet
   ) where
 
 import Data.Array (foldl, snoc) as Array
+import PureScript.Lint.Internal.Survey (PackageRule, WorkspaceRule)
 import PureScript.Lint.Rule (DeclarationRule, ExprRule, ModuleRule)
-import PureScript.Lint.Rule.Survey (PackageRule, WorkspaceRule)
 
 -- | One entry in a rule set: a rule at any of the levels, or a named
 -- | group of them.

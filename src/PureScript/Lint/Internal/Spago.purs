@@ -24,13 +24,17 @@ import Node.Buffer as Buffer
 import Node.ChildProcess (execSync)
 import Node.Encoding (Encoding(..))
 
+-- | A package this repo owns, as spago reports it.
 type SpagoWorkspacePackage =
   { name :: String
   , path :: String
   }
 
+-- | A package spago knows about. Only the workspace's own are ours to
+-- | lint; registry and git dependencies fold together as `PkgOther`.
 data SpagoPkg = PkgOther | PkgWorkspace SpagoWorkspacePackage
 
+-- | Every package spago knows about, ours and its dependencies.
 spagoLsPackages :: Aff (Array SpagoPkg)
 spagoLsPackages = do
   raw <- runSpagoLsPackages

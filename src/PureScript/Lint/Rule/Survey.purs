@@ -1,5 +1,18 @@
-module PureScript.Lint.Rule.Survey
-  ( PackageLint
+-- | Rules that look at many modules at once rather than at one piece of
+-- | syntax.
+-- |
+-- | A survey rule is handed a cheap structural map - module names,
+-- | paths and kinds - rather than every module's CST, so a rule about
+-- | how a package is laid out does not pay for parsing it. `perPackage`
+-- | sees one package; `perWorkspace` sees them all.
+-- |
+-- | A survey rule returns findings and cannot rewrite anything: there is
+-- | no syntax in front of it to fix.
+module PureScript.Lint.Rule.Survey (module Exports) where
+
+import PureScript.Lint.Internal.Survey
+  ( class HasPageExclude
+  , PackageLint
   , PackageRule
   , PackageSurvey
   , PageExemption
@@ -8,112 +21,7 @@ module PureScript.Lint.Rule.Survey
   , WorkspaceLint
   , WorkspaceRule
   , WorkspaceSurvey
-  , class HasPageExclude
-  , class SurveyLike
   , excludePages
   , perPackage
   , perWorkspace
-  , runSurveyRules
-  , surveyCheck
-  , surveyDisabled
-  , surveyExclude
-  ) where
-
-import Prelude
-
-import Data.Array (any, concatMap, filter) as Array
-import Data.Maybe (Maybe)
-import Node.Path (FilePath)
-import PureScript.Lint.Rule (class RuleOptions, ModuleKind)
-
-type SurveyModule = { moduleName :: String, path :: FilePath, kind :: ModuleKind }
-
-type SurveyFinding = { page :: String, message :: String }
-
-type PageExemption = { name :: String, appliesTo :: String -> Boolean }
-
-type PackageSurvey =
-  { packageName :: String
-  , packagePath :: FilePath
-  , modules :: Array SurveyModule
-  }
-
-type WorkspaceSurvey = { packages :: Array PackageSurvey }
-
-type PackageLint =
-  { name :: String
-  , description :: String
-  , goodExample :: Maybe String
-  , badExample :: Maybe String
-  , rule :: PackageSurvey -> Array SurveyFinding
-  }
-
-type WorkspaceLint =
-  { name :: String
-  , description :: String
-  , goodExample :: Maybe String
-  , badExample :: Maybe String
-  , rule :: WorkspaceSurvey -> Array SurveyFinding
-  }
-
-newtype PackageRule = PackageRule
-  { exclude :: Array PageExemption
-  , disabled :: Boolean
-  , rule :: PackageLint
-  }
-
-perPackage :: PackageLint -> PackageRule
-perPackage check =
-  PackageRule { exclude: [], disabled: false, rule: check }
-
-instance RuleOptions PackageRule where
-  disabled d (PackageRule r) = PackageRule (r { disabled = d })
-
-instance HasPageExclude PackageRule where
-  excludePages ex (PackageRule r) = PackageRule (r { exclude = ex })
-
-newtype WorkspaceRule = WorkspaceRule
-  { exclude :: Array PageExemption
-  , disabled :: Boolean
-  , rule :: WorkspaceLint
-  }
-
-perWorkspace :: WorkspaceLint -> WorkspaceRule
-perWorkspace check =
-  WorkspaceRule { exclude: [], disabled: false, rule: check }
-
-instance RuleOptions WorkspaceRule where
-  disabled d (WorkspaceRule r) = WorkspaceRule (r { disabled = d })
-
-instance HasPageExclude WorkspaceRule where
-  excludePages ex (WorkspaceRule r) = WorkspaceRule (r { exclude = ex })
-
-class HasPageExclude r where
-  excludePages :: Array PageExemption -> r -> r
-
-class SurveyLike r s | r -> s where
-  surveyDisabled :: r -> Boolean
-  surveyExclude :: r -> Array PageExemption
-  surveyCheck :: r -> s -> Array SurveyFinding
-
-instance SurveyLike PackageRule PackageSurvey where
-  surveyDisabled (PackageRule r) = r.disabled
-  surveyExclude (PackageRule r) = r.exclude
-  surveyCheck (PackageRule r) = r.rule.rule
-
-instance SurveyLike WorkspaceRule WorkspaceSurvey where
-  surveyDisabled (WorkspaceRule r) = r.disabled
-  surveyExclude (WorkspaceRule r) = r.exclude
-  surveyCheck (WorkspaceRule r) = r.rule.rule
-
-runSurveyRules :: ∀ r s. SurveyLike r s => Array r -> s -> Array String
-runSurveyRules rules survey =
-  let
-    applyOne r
-      | surveyDisabled r = []
-      | otherwise = map _.message (Array.filter (kept r) (surveyCheck r survey))
-  in
-    Array.concatMap applyOne rules
-
-kept :: ∀ r s. SurveyLike r s => r -> SurveyFinding -> Boolean
-kept r finding = not (Array.any (\ex -> ex.appliesTo finding.page) (surveyExclude r))
+  ) as Exports
