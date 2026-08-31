@@ -2,6 +2,7 @@
   "recommendations": [
     "nwolverson.ide-purescript",
     "nwolverson.language-purescript",
-    "jnoortheen.nix-ide"
+    "jnoortheen.nix-ide",
+    "mkhl.direnv"
   ]
 }

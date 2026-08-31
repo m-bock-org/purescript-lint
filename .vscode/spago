@@ -1,12 +1,26 @@
 #!/usr/bin/env bash
 # The IDE extension runs the toolchain through here, so it gets the
 # versions this repo's flake pins - never a globally installed one, and
-# never node_modules'. Works however the editor was started.
+# never node_modules'.
 #
-# `just ide-setup` pins .vscode/.toolchain, which skips a Nix evaluation
-# on every call; without it this still works, just slower.
+# Two ways in, because an editor started from a desktop launcher has
+# neither the dev shell's PATH nor, usually, nix on PATH at all:
+#
+#   1. .vscode/.toolchain, pinned by `just ide-setup`. No nix needed at
+#      all, and it costs about 10ms.
+#   2. Otherwise nix, looked up at its usual absolute locations rather
+#      than trusted to be on PATH.
 set -euo pipefail
 root="$(dirname "$(readlink -f "$0")")/.."
+
 pinned="$root/.vscode/.toolchain/bin/spago"
 if [ -x "$pinned" ]; then exec "$pinned" "$@"; fi
-exec "$(nix build "$root#toolchain" --no-link --print-out-paths)/bin/spago" "$@"
+
+for candidate in nix "$HOME/.nix-profile/bin/nix" /nix/var/nix/profiles/default/bin/nix /run/current-system/sw/bin/nix; do
+  if command -v "$candidate" >/dev/null 2>&1; then
+    exec "$("$candidate" build "$root#toolchain" --no-link --print-out-paths)/bin/spago" "$@"
+  fi
+done
+
+echo "spago: no .vscode/.toolchain and no nix found - run 'just ide-setup' in $root" >&2
+exit 127
