@@ -135,12 +135,12 @@ clear.
 
 Four levels, each a different unit of syntax:
 
-| | sees | for |
-|---|---|---|
-| `perExpr` | one expression | nesting, escapes, branch shape |
-| `perDecl` | one declaration | signatures, arity, naming |
-| `perModule` | one module | imports, exports, line length |
-| `perPackage` / `perWorkspace` | a survey of many modules | namespace and package-boundary rules |
+| | sees |
+|---|---|
+| `perExpr` | one expression |
+| `perDecl` | one declaration |
+| `perModule` | one module |
+| `perPackage` / `perWorkspace` | a survey of many modules |
 
 ## Defining a rule set
 
