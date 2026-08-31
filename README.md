@@ -19,16 +19,17 @@ expected path - see below.
 
 ## Installation
 
-Not on the registry yet, so add it to `extraPackages` by commit. Its own
-dependency `encode-decode` is not on the registry either, so that one
-needs an entry too:
+Not on the registry yet, so add it to `extraPackages` and pin each one to
+a commit. `encode-decode` is a dependency that is not on the registry
+either, so it needs an entry of its own. Versions arrive with the
+registry release.
 
 ```yaml
 workspace:
   extraPackages:
     lint-purs:
       git: https://github.com/m-bock/purescript-lint.git
-      ref: d2740bc5b55c88833101e8ac3ed700989e8407d3
+      ref: <commit>
       dependencies:
         - aff
         - arrays
@@ -52,7 +53,7 @@ workspace:
         - tuples
     encode-decode:
       git: https://github.com/m-bock/purescript-encode-decode.git
-      ref: 07a361b0e42314ee6521b8ccc774eca117be57d0
+      ref: <commit>
       dependencies:
         - argonaut-core
         - argonaut-codecs
