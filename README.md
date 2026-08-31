@@ -19,21 +19,24 @@ A rule is a record: a name, a description, an example of each side, and a
 function from some piece of syntax to a verdict.
 
 ```purescript
-sameConstructorArm :: ExprLint
-sameConstructorArm =
-  { name: RuleName "same-constructor-arm"
-  , description: "Flags a case arm that rebuilds the constructor it just matched."
-  , goodExample: Just "map f m"
-  , badExample: Just "case m of\n  Just x -> Just (f x)\n  Nothing -> Nothing"
-  , rule: \_context expr ->
-      if rebuildsMatchedConstructor expr then Violation "this case is a map" else Passed
+maxFunctionArity :: Int -> DeclarationLint
+maxFunctionArity maxArity =
+  { name: RuleName "max-function-arity"
+  , description: "Flags a top-level function with more arguments than the configured maximum."
+  , goodExample: Nothing
+  , badExample: Nothing
+  , rule: \_context decl -> case decl of
+      DeclValue { name: Name { name: Ident n }, binders }
+        | Array.length binders > maxArity ->
+            Violation (n <> " takes " <> show (Array.length binders) <> ", over " <> show maxArity)
+      _ -> Passed
   }
 ```
 
-That one is worth having because a formatter cannot reach it. The
-problem is not how the code is laid out, it is what it means: matching
-`Just` and rebuilding `Just` around the result is `map`, spelled
-long-hand. Catching that needs something that looks at structure.
+That is the whole rule - nothing is elided. Note that it is a *function*
+returning a record: the configuration is just an argument, so
+`maxFunctionArity 4` is a rule and there is no config file for it to be
+configured from.
 
 A verdict is `Passed`, `Violation String`, `ViolationWithHint`, or
 `Fixed` with rewritten syntax. `Fixed` makes a rule auto-fixable, and the
