@@ -1,7 +1,5 @@
 module PureScript.Lint.RuleSet
   ( FlatRules
-  , LintPhase
-  , LintRuleSet
   , Rule
   , class ToRule
   , flattenRules
@@ -10,7 +8,7 @@ module PureScript.Lint.RuleSet
   ) where
 
 import Data.Array (foldl, snoc) as Array
-import PureScript.Lint.Rule (DeclarationRule, ExprRule, GlobalExemption, ModuleRule)
+import PureScript.Lint.Rule (DeclarationRule, ExprRule, ModuleRule)
 import PureScript.Lint.Rule.Survey (PackageRule, WorkspaceRule)
 
 data Rule
@@ -65,41 +63,29 @@ flattenRules rules =
   in
     Array.foldl step empty rules
 
-type LintPhase =
-  { name :: String
-  , rules :: Array Rule
-  }
-
-type LintRuleSet =
-  { globalExclude :: Array GlobalExemption
-  , phases :: Array LintPhase
-  }
-
--- A `LintPhase` is a named set of rules you can run on its own. The
--- split exists because a rule's answer is only worth acting on once it
--- is stable: a formatting complaint raised while a function is still
--- being restructured gets invalidated by the next edit, while the same
--- complaint on settled code is a real finding. Same rule, better signal,
--- purely from when it fires.
+-- A rule set is an `Array Rule` and nothing more. A project that wants
+-- more than one - a quick set while restructuring, the full set in CI -
+-- writes more than one, and a set that builds on another writes
+-- `quick <> rest`, which is ordinary array concatenation. That only
+-- works because there is no wrapper: a record would have to be merged
+-- field by field instead.
 --
--- Phases are plain data - a name and an array - rather than a closed
--- type, and deliberately so. This library should not decide that every
--- project has exactly three stages, or that they are called design,
--- convention and polish; that is one workflow, not a fact about linting.
+-- This used to be a `LintRuleSet` record carrying named `phases`, and
+-- the runner took a phase name to
+-- select one (2026-08-31). Two things were wrong with it. The engine
+-- never used the structure - it looked one entry up by name and worked
+-- on that array, so it was a `Map String (Array Rule)` spelled as a
+-- record. And the lookup could not fail: an unknown name selected an
+-- empty rule set, so the linter ran nothing, reported zero violations
+-- and exited green. A misspelt `--phase` passed CI. Selecting a rule
+-- set by a string from argv is a real need, but it belongs to whoever
+-- owns the command line, where an unknown name can be an error instead
+-- of silence.
 --
--- Nor are they a chain. An earlier attempt made `Phase` an `Ord` sum and
--- ran everything up to a cutoff, which quietly assumes each set nests
--- inside the next - true for design/convention/polish, false in general
--- (`pre-commit` and `ci` overlap without either containing the other).
--- A config that *does* want nesting writes `design <> convention`, which
--- is ordinary array concatenation and needs nothing from here.
---
--- The same rule may appear in several phases, and that is not a mistake
--- to warn about: a cheap high-value check can reasonably belong to every
--- set. The cost of allowing it is that a rule listed in no phase never
--- runs, silently - which is why the runner prints how many rules a phase
--- actually contains.
---
+-- `globalExclude` went to `runLinter` at the same time. It is how one
+-- run is configured, not what the rules are, and it sat beside
+-- `excludeRules` - already a runner argument - so the two halves of
+-- "skip this" were split across two places for no reason.
 --
 -- Split out of `PureScript.Lint.Rule` (2026-08-29). Assembling a rule set is
 -- a different job from defining what a rule is, and it is the only part

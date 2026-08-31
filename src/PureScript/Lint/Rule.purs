@@ -285,7 +285,7 @@ runRules { excludeRules, context } rules initial =
 -- documentation at the call site (`skipWhen [ scratchModule ] rule`)
 -- instead of an anonymous predicate whose intent has to be re-derived
 -- every place it's reused. GlobalExemption is the same idea, but for
--- `LintRuleSet.globalExclude` - a value nothing at any of the three
+-- `runLinter`'s `globalExclude` - a value nothing at any of the three
 -- CST levels needs to inspect (`scratchModule`'s whole reason for
 -- existing is "which file is this", answerable from `LintContext`
 -- alone), so there's no `a` to be polymorphic over in the first
@@ -334,7 +334,7 @@ runRules { excludeRules, context } rules initial =
 -- whose `name` is in `excludeRules` is skipped outright; everything
 -- else runs through `skipWhen`.
 --
--- LintRuleSet's `globalExclude` runs once per module, before any rule
+-- `runLinter`'s `globalExclude` runs once per module, before any rule
 -- in `lintRules` even sees it - a file it matches (e.g. a scratch
 -- module) is skipped at every level, rather than needing every
 -- individual rule to remember to list the same exemption in its own
@@ -347,7 +347,7 @@ runRules { excludeRules, context } rules initial =
 -- `RuleModule`/`RuleDeclaration`/`RuleExpr` just wrap the three
 -- existing opaque rule types unchanged - nothing about `ModuleRule`/
 -- `DeclarationRule`/`ExprRule` themselves changed, only how a
--- `LintRuleSet` holds them. `ToRule`'s `rule` is a typeclass-based
+-- a rule set holds them. `ToRule`'s `rule` is a typeclass-based
 -- injector purely for call-site ergonomics (`rule $ perModule
 -- explicitImports` reads the same regardless of which of the three
 -- kinds `perModule` produces) - it carries no logic of its own beyond
@@ -364,7 +364,7 @@ runRules { excludeRules, context } rules initial =
 -- in a left-to-right, depth-first walk of the tree. This is a pure
 -- reshaping step, not a behavior change - `Linter` still runs all
 -- module rules, then all declaration rules, then all expression rules,
--- in that fixed sequence, exactly as it did when `LintRuleSet` held
+-- in that fixed sequence, exactly as it did when a record held
 -- three separate arrays directly. Authoring order across *different*
 -- kinds was never meaningful (a module rule earlier in the old
 -- `lintModules` array vs. a declaration rule earlier in the old

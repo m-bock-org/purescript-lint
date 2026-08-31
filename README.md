@@ -64,13 +64,6 @@ Four levels, each a different unit of syntax:
 ```purescript
 import PureScript.Lint.RuleSet.Do as Rules
 
-rules :: LintRuleSet
-rules =
-  { globalExclude: []
-  , phases:
-      [ { name: "all", rules: everything } ]
-  }
-
 everything :: Array Rule
 everything = Rules.do
   group "How much fits on one line" Rules.do
@@ -82,8 +75,15 @@ everything = Rules.do
     rule $ perDecl (maxLambdaNestingDepth 3)
 ```
 
-`group` is presentation only - it names a section in the output. Phases
-let one repo run a small set while iterating and the full set in CI.
+`group` is presentation only - it names a section in the output.
+
+A rule set is an `Array Rule` and nothing more - no wrapper, no name. A
+repo that wants more than one, a quick set while restructuring and the
+full set in CI, writes two arrays, and a set that builds on another is
+`quick <> rest`. That only works because there is nothing around it to
+merge. Choosing between them at the command line is the caller's job,
+which means an unrecognised name can be an error rather than a silently
+empty run.
 
 Rules can be excluded per module, with a reason attached, so an exemption
 records *why* rather than just switching something off.
@@ -153,7 +153,7 @@ import PureScript.Lint (runLinter)
 
 main :: Effect Unit
 main = launchAff_ do
-  exitCode <- runLinter [] "all" rules
+  exitCode <- runLinter [] [] everything
   liftEffect (exit exitCode)
 ```
 

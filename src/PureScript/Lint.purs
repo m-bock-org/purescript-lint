@@ -6,7 +6,6 @@ import Control.Monad.State (State, modify_, runState)
 import Data.Array as Array
 import Data.Foldable (fold, for_, sum)
 import Data.Maybe (Maybe(..))
-import Data.Maybe (fromMaybe) as Maybe
 import Data.Traversable (for)
 import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff)
@@ -23,22 +22,21 @@ import PureScript.CST.Types
   , ModuleName(..)
   , Name(..)
   ) as CST
-import PureScript.Lint.Rule (ExprRule, LintContext, RuleAlias, RuleOutcome, runRules)
+import PureScript.Lint.Rule (ExprRule, GlobalExemption, LintContext, RuleAlias, RuleOutcome, runRules)
 import PureScript.Lint.Rule.Survey (PackageSurvey, SurveyModule, runSurveyRules)
-import PureScript.Lint.RuleSet (FlatRules, LintPhase, LintRuleSet, flattenRules)
+import PureScript.Lint.RuleSet (FlatRules, Rule, flattenRules)
 import PureScript.Lint.Workspace (Workspace, WorkspaceModule)
 import PureScript.Lint.Workspace as Workspace
 
--- | Uses `printWorkspace`, `phaseNamed`, `ruleCount`, `lintModule`, `reportSurvey`.
-runLinter :: Array RuleAlias -> String -> LintRuleSet -> Aff Int
-runLinter excludeRules phaseName ruleSet = do
+-- | Uses `printWorkspace`, `ruleCount`, `lintModule`, `reportSurvey`.
+runLinter :: Array RuleAlias -> Array GlobalExemption -> Array Rule -> Aff Int
+runLinter excludeRules globalExclude rules = do
   workspace <- Workspace.getWorkspace
   printWorkspace workspace
   let
-    selected = phaseNamed phaseName ruleSet.phases
-    flatRules = flattenRules selected.rules
-    configured = { excludeRules, ruleSet, flatRules }
-  log $ fold [ "Linter: phase ", selected.name, ", ", show (ruleCount flatRules), " rule(s)" ]
+    flatRules = flattenRules rules
+    configured = { excludeRules, globalExclude, flatRules }
+  log $ fold [ "Linter: ", show (ruleCount flatRules), " rule(s)" ]
   scanned <- for workspace.packages \pkg -> do
     perModule <- for pkg.modules (lintModule configured pkg.name)
     let survey = { packageName: pkg.name, packagePath: pkg.path, modules: map _.surveyed perModule }
@@ -61,11 +59,6 @@ reportSurvey { excludeRules, flatRules } surveys = do
   pure (Array.length findings)
 
 -- | Private. Used only by `runLinter`.
-phaseNamed :: String -> Array LintPhase -> LintPhase
-phaseNamed wanted phases = Maybe.fromMaybe { name: wanted, rules: [] }
-  (Array.find (\p -> p.name == wanted) phases)
-
--- | Private. Used only by `runLinter`.
 ruleCount :: FlatRules -> Int
 ruleCount flatRules = Array.length flatRules.modules
   + Array.length flatRules.declarations
@@ -74,13 +67,16 @@ ruleCount flatRules = Array.length flatRules.modules
   + Array.length flatRules.workspaces
 
 type Configured =
-  { excludeRules :: Array RuleAlias, ruleSet :: LintRuleSet, flatRules :: FlatRules }
+  { excludeRules :: Array RuleAlias
+  , globalExclude :: Array GlobalExemption
+  , flatRules :: FlatRules
+  }
 
 type ModuleScan = { surveyed :: SurveyModule, violations :: Int }
 
 -- | Private. Used only by `runLinter`. Uses `moduleNameOf`, `rewriteDecls`, `lintExprsInDecl`.
 lintModule :: Configured -> String -> WorkspaceModule -> Aff ModuleScan
-lintModule { excludeRules, ruleSet, flatRules } packageName workspaceModule = do
+lintModule { excludeRules, globalExclude, flatRules } packageName workspaceModule = do
   original <- Workspace.readModule workspaceModule
   let
     context :: LintContext
@@ -93,7 +89,7 @@ lintModule { excludeRules, ruleSet, flatRules } packageName workspaceModule = do
       }
     surveyed =
       { moduleName: context.moduleName, path: context.path, kind: context.kind }
-  if Array.any (\g -> g.appliesTo context) ruleSet.globalExclude then
+  if Array.any (\g -> g.appliesTo context) globalExclude then
     pure { surveyed, violations: 0 }
   else do
     let
@@ -180,11 +176,11 @@ printWorkspace { packages } = do
 
 -- Context: the library's own entry point - a generic PureScript CST
 -- linter, not tied to any one repo's rules (see the sibling `lint`
--- package for this repo's own `LintRuleSet`). Meant to eventually
+-- package for this repo's own rule set). Meant to eventually
 -- move out of the trading-bot repo and stand alone; developed in here
--- for now. runLinter reads the workspace, flattens `ruleSet.lintRules`
+-- for now. runLinter reads the workspace, flattens the rules
 -- once via `PureScript.Lint.Rule.flattenRules` (see that module's own
--- trailing comment - a `LintRuleSet` authors one freely-ordered/
+-- trailing comment - a rule set authors one freely-ordered/
 -- grouped `Array Rule`, but the runner still needs the three
 -- homogeneous arrays this module was already built around), then runs
 -- every module/declaration rule over every discovered module. Returns
