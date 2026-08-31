@@ -22,11 +22,11 @@ import PureScript.CST.Types
   , ModuleName(..)
   , Name(..)
   ) as CST
+import PureScript.Lint.Internal.Workspace (Workspace, WorkspaceModule)
+import PureScript.Lint.Internal.Workspace as Workspace
 import PureScript.Lint.Rule (ExprRule, LintContext, ModuleExemption, RuleOutcome, runRules)
 import PureScript.Lint.Rule.Survey (PackageSurvey, SurveyModule, runSurveyRules)
 import PureScript.Lint.RuleSet (FlatRules, Rule, flattenRules)
-import PureScript.Lint.Workspace (Workspace, WorkspaceModule)
-import PureScript.Lint.Workspace as Workspace
 
 runLinter :: Array Rule -> Aff Int
 runLinter = runLinterWith { skipModules: [] }

@@ -1,4 +1,4 @@
-module PureScript.Lint.Spago
+module PureScript.Lint.Internal.Spago
   ( spagoLsPackages
   , SpagoWorkspacePackage
   , SpagoPkg(..)

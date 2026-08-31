@@ -4,6 +4,7 @@ module PureScript.Lint.Rule
   , ExprLint
   , ExprRule
   , ModuleExemption
+  , ModuleKind(..)
   , LintContext
   , LintExemption
   , LintResult
@@ -43,7 +44,6 @@ import Data.String.CodeUnits (drop, dropWhile, length) as Str
 import Data.String.Common (joinWith, split, trim) as Str
 import Node.Path (FilePath)
 import PureScript.CST.Types (Declaration, Expr, Module) as CST
-import PureScript.Lint.Workspace (ModuleKind)
 
 data LintResult a
   = Passed
@@ -74,6 +74,16 @@ withHint :: ∀ a. String -> LintResult a -> LintResult a
 withHint hint = case _ of
   Violations found _ -> Violations found (Just hint)
   other -> other
+
+-- | Which of a package's two module trees a module came from.
+data ModuleKind = SourceModule | TestModule
+
+derive instance eqModuleKind :: Eq ModuleKind
+
+instance showModuleKind :: Show ModuleKind where
+  show = case _ of
+    SourceModule -> "SourceModule"
+    TestModule -> "TestModule"
 
 type LintContext =
   { packageName :: String

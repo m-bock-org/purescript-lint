@@ -24,8 +24,7 @@ import Prelude
 import Data.Array (any, concatMap, filter) as Array
 import Data.Maybe (Maybe)
 import Node.Path (FilePath)
-import PureScript.Lint.Rule (class RuleOptions)
-import PureScript.Lint.Workspace (ModuleKind)
+import PureScript.Lint.Rule (class RuleOptions, ModuleKind)
 
 type SurveyModule = { moduleName :: String, path :: FilePath, kind :: ModuleKind }
 

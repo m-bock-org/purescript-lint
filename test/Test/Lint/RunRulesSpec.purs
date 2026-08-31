@@ -9,6 +9,7 @@ import PureScript.CST (RecoveredParserResult(..), parseModule)
 import PureScript.CST.Types (Module) as CST
 import PureScript.Lint.Rule
   ( LintContext
+  , ModuleKind(..)
   , ModuleLint
   , ModuleRule
   , disabled
@@ -20,7 +21,6 @@ import PureScript.Lint.Rule
   , violations
   , withHint
   )
-import PureScript.Lint.Workspace (ModuleKind(..))
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 

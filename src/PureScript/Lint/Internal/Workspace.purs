@@ -1,6 +1,5 @@
-module PureScript.Lint.Workspace
+module PureScript.Lint.Internal.Workspace
   ( LocalPackage
-  , ModuleKind(..)
   , Workspace
   , WorkspaceModule
   , getWorkspace
@@ -28,7 +27,8 @@ import PureScript.CST (RecoveredParserResult(..), parseModule, printModule) as C
 import PureScript.CST.Errors (printParseError)
 import PureScript.CST.Parser.Monad (PositionedError)
 import PureScript.CST.Types (Module) as CST
-import PureScript.Lint.Spago (SpagoPkg(..), spagoLsPackages)
+import PureScript.Lint.Internal.Spago (SpagoPkg(..), spagoLsPackages)
+import PureScript.Lint.Rule (ModuleKind(..))
 
 type Workspace = { packages :: Array LocalPackage }
 
@@ -42,15 +42,6 @@ type WorkspaceModule =
   { path :: FilePath
   , kind :: ModuleKind
   }
-
-data ModuleKind = SourceModule | TestModule
-
-derive instance eqModuleKind :: Eq ModuleKind
-
-instance showModuleKind :: Show ModuleKind where
-  show = case _ of
-    SourceModule -> "SourceModule"
-    TestModule -> "TestModule"
 
 modulesOf :: FilePath -> Aff (Array WorkspaceModule)
 modulesOf packagePath = do
