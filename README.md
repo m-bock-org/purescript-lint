@@ -2,7 +2,8 @@
 
 A lint engine for PureScript, written in PureScript. Rules are ordinary
 values, so a rule set is a program you write rather than a config file you
-fill in.
+fill in - which also means there is no way to use it without writing
+PureScript.
 
 It reads a Spago workspace, parses each module with
 [`language-cst-parser`](https://github.com/natefaubion/purescript-language-cst-parser),
@@ -161,8 +162,6 @@ it from a repo root with a `spago.yaml`.
 
 ## Not yet
 
-- No config file, by design - but also no way to use it without writing
-  PureScript.
 - No editor integration.
 - Fixes are applied by the caller; the engine reports them.
 - The survey API is the least settled part.
