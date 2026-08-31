@@ -23,14 +23,17 @@ import Lint.Rule
   , violations
   )
 
-maxFunctionArity :: Int -> DeclarationLint
-maxFunctionArity maxArity =
+maxFunctionArity :: DeclarationLint Int
+maxFunctionArity =
   { name: "max-function-arity"
   , description: "Flags a function with more arguments than allowed."
-  , goodExamples: [ "resize { width, height } img = img" ]
-  , badExamples: [ "resize width height quality img = img" ]
-  , exampleConfig: Just ("maxFunctionArity " <> show maxArity)
-  , rule: \_context decl -> case decl of
+  , examples: Just
+      { config: 3
+      , printConfig: \n -> Just ("max arity " <> show n)
+      , good: [ "resize { width, height } img = img" ]
+      , bad: [ "resize width height quality img = img" ]
+      }
+  , rule: \maxArity _context decl -> case decl of
       DeclValue { name: Name { name: Ident n }, binders }
         | Array.length binders > maxArity ->
             violations
@@ -40,10 +43,10 @@ maxFunctionArity maxArity =
 
 -- | The same rule, with and without an exemption.
 arityRule :: DeclarationRule
-arityRule = perDecl (maxFunctionArity 3)
+arityRule = perDecl maxFunctionArity 3
 
 arityUnlessGenerated :: DeclarationRule
-arityUnlessGenerated = exclude [ generatedCode ] (perDecl (maxFunctionArity 3))
+arityUnlessGenerated = exclude [ generatedCode ] (perDecl maxFunctionArity 3)
 
 generatedCode :: LintExemption (CST.Declaration Void)
 generatedCode =

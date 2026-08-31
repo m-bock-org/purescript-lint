@@ -11,6 +11,7 @@ import Lint.Internal.Rule
   , class RuleOptions
   , DeclarationLint
   , DeclarationRule
+  , Examples
   , ExprLint
   , ExprRule
   , LintContext
@@ -25,8 +26,11 @@ import Lint.Internal.Rule
   , exclude
   , fixed
   , perDecl
+  , perDecl_
   , perExpr
+  , perExpr_
   , perModule
+  , perModule_
   , violations
   , withHint
   ) as Exports

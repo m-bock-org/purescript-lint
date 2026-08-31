@@ -13,7 +13,9 @@ module Lint.Internal.Survey
   , class SurveyLike
   , ignoreSubjects
   , perPackage
+  , perPackage_
   , perWorkspace
+  , perWorkspace_
   , runSurveyRules
   , surveyCheck
   , surveyDisabled
@@ -25,7 +27,7 @@ import Prelude
 import Data.Array (any, concatMap, filter) as Array
 import Data.Maybe (Maybe)
 import Node.Path (FilePath)
-import Lint.Internal.Rule (class RuleOptions, Grouped, ModuleKind)
+import Lint.Internal.Rule (class RuleOptions, Examples, Grouped, ModuleKind)
 
 -- | One module, as a survey sees it: where it is, not what is in it.
 type SurveyModule = { moduleName :: String, path :: FilePath, kind :: ModuleKind }
@@ -65,36 +67,36 @@ type PackageSurvey =
 type WorkspaceSurvey = { packages :: Array PackageSurvey }
 
 -- | A rule that sees one package's layout.
-type PackageLint =
+type PackageLint cfg =
   { name :: String
   , description :: String
-  , goodExamples :: Array String
-  , badExamples :: Array String
-  , exampleConfig :: Maybe String
-  , rule :: PackageSurvey -> Array SurveyFinding
+  , examples :: Maybe (Examples cfg)
+  , rule :: cfg -> PackageSurvey -> Array SurveyFinding
   }
 
 -- | A rule that sees every package's layout at once.
-type WorkspaceLint =
+type WorkspaceLint cfg =
   { name :: String
   , description :: String
-  , goodExamples :: Array String
-  , badExamples :: Array String
-  , exampleConfig :: Maybe String
-  , rule :: WorkspaceSurvey -> Array SurveyFinding
+  , examples :: Maybe (Examples cfg)
+  , rule :: cfg -> WorkspaceSurvey -> Array SurveyFinding
   }
 
 -- | A package rule with its options applied.
 newtype PackageRule = PackageRule
   { exclude :: Array SubjectExemption
   , disabled :: Boolean
-  , rule :: PackageLint
+  , check :: PackageSurvey -> Array SurveyFinding
   }
 
 -- | Run this rule once per package.
-perPackage :: PackageLint -> PackageRule
-perPackage check =
-  PackageRule { exclude: [], disabled: false, rule: check }
+perPackage :: ∀ cfg. PackageLint cfg -> cfg -> PackageRule
+perPackage lint config =
+  PackageRule { exclude: [], disabled: false, check: lint.rule config }
+
+-- | Run a rule that has nothing to configure once per package.
+perPackage_ :: PackageLint Unit -> PackageRule
+perPackage_ lint = perPackage lint unit
 
 instance RuleOptions PackageRule where
   disabled d (PackageRule r) = PackageRule (r { disabled = d })
@@ -106,13 +108,17 @@ instance HasSubjectIgnore PackageRule where
 newtype WorkspaceRule = WorkspaceRule
   { exclude :: Array SubjectExemption
   , disabled :: Boolean
-  , rule :: WorkspaceLint
+  , check :: WorkspaceSurvey -> Array SurveyFinding
   }
 
 -- | Run this rule once over the whole workspace.
-perWorkspace :: WorkspaceLint -> WorkspaceRule
-perWorkspace check =
-  WorkspaceRule { exclude: [], disabled: false, rule: check }
+perWorkspace :: ∀ cfg. WorkspaceLint cfg -> cfg -> WorkspaceRule
+perWorkspace lint config =
+  WorkspaceRule { exclude: [], disabled: false, check: lint.rule config }
+
+-- | Run a rule that has nothing to configure over the whole workspace.
+perWorkspace_ :: WorkspaceLint Unit -> WorkspaceRule
+perWorkspace_ lint = perWorkspace lint unit
 
 instance RuleOptions WorkspaceRule where
   disabled d (WorkspaceRule r) = WorkspaceRule (r { disabled = d })
@@ -138,12 +144,12 @@ class SurveyLike r s | r -> s where
 instance SurveyLike PackageRule PackageSurvey where
   surveyDisabled (PackageRule r) = r.disabled
   surveyExclude (PackageRule r) = r.exclude
-  surveyCheck (PackageRule r) = r.rule.rule
+  surveyCheck (PackageRule r) = r.check
 
 instance SurveyLike WorkspaceRule WorkspaceSurvey where
   surveyDisabled (WorkspaceRule r) = r.disabled
   surveyExclude (WorkspaceRule r) = r.exclude
-  surveyCheck (WorkspaceRule r) = r.rule.rule
+  surveyCheck (WorkspaceRule r) = r.check
 
 -- | Run every survey rule and collect what they found.
 runSurveyRules

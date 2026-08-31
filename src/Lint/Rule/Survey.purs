@@ -23,5 +23,7 @@ import Lint.Internal.Survey
   , WorkspaceSurvey
   , ignoreSubjects
   , perPackage
+  , perPackage_
   , perWorkspace
+  , perWorkspace_
   ) as Exports

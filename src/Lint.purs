@@ -118,9 +118,10 @@ printByRule located =
         )
       log ("    " <> rule.description)
       for_ sharedHint \h -> log ("    hint: " <> h)
-      for_ rule.exampleConfig \c -> log ("      with  " <> c)
-      for_ rule.goodExamples \e -> log ("      good  " <> e)
-      for_ rule.badExamples \e -> log ("      bad   " <> e)
+      for_ rule.examples \examples -> do
+        for_ examples.config \c -> log ("      with  " <> c)
+        for_ examples.good \e -> log ("      good  " <> e)
+        for_ examples.bad \e -> log ("      bad   " <> e)
       for_ (NEA.toArray group) \{ moduleName, finding } -> do
         log ""
         log ("  ◦ " <> moduleName)

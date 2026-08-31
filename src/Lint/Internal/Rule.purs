@@ -1,6 +1,7 @@
 module Lint.Internal.Rule
   ( Guarded
   , DeclarationLint
+  , Examples
   , DeclarationRule
   , ExprLint
   , ExprRule
@@ -24,8 +25,11 @@ module Lint.Internal.Rule
   , exclude
   , fixed
   , perDecl
+  , perDecl_
   , perExpr
+  , perExpr_
   , perModule
+  , perModule_
   , ruleCheck
   , ruleDisabled
   , ruleExclude
@@ -94,34 +98,43 @@ type LintContext =
   , kind :: ModuleKind
   }
 
+-- | What a rule looks like on both sides, and the setting those examples
+-- | are read against: two nested lambdas are fine at a depth of two and a
+-- | violation at one, so the setting travels with them.
+-- |
+-- | `printConfig` is a function of the setting rather than a stored
+-- | string, so it cannot name a different one. `Just <<< show` where the
+-- | value speaks for itself, words where the number needs a noun, and
+-- | `\_ -> Nothing` where there is nothing to configure.
+type Examples cfg =
+  { config :: cfg
+  , printConfig :: cfg -> Maybe String
+  , good :: Array String
+  , bad :: Array String
+  }
+
 -- | A rule that sees one whole module.
-type ModuleLint =
+type ModuleLint cfg =
   { name :: String
   , description :: String
-  , goodExamples :: Array String
-  , badExamples :: Array String
-  , exampleConfig :: Maybe String
-  , rule :: LintContext -> CST.Module Void -> LintResult (CST.Module Void)
+  , examples :: Maybe (Examples cfg)
+  , rule :: cfg -> LintContext -> CST.Module Void -> LintResult (CST.Module Void)
   }
 
 -- | A rule that sees one top-level declaration.
-type DeclarationLint =
+type DeclarationLint cfg =
   { name :: String
   , description :: String
-  , goodExamples :: Array String
-  , badExamples :: Array String
-  , exampleConfig :: Maybe String
-  , rule :: LintContext -> CST.Declaration Void -> LintResult (CST.Declaration Void)
+  , examples :: Maybe (Examples cfg)
+  , rule :: cfg -> LintContext -> CST.Declaration Void -> LintResult (CST.Declaration Void)
   }
 
 -- | A rule that sees one expression, anywhere inside a declaration.
-type ExprLint =
+type ExprLint cfg =
   { name :: String
   , description :: String
-  , goodExamples :: Array String
-  , badExamples :: Array String
-  , exampleConfig :: Maybe String
-  , rule :: LintContext -> CST.Expr Void -> LintResult (CST.Expr Void)
+  , examples :: Maybe (Examples cfg)
+  , rule :: cfg -> LintContext -> CST.Expr Void -> LintResult (CST.Expr Void)
   }
 
 -- | A named reason one rule should skip a particular value. The name
@@ -196,17 +209,28 @@ class RuleLike r a | r -> a where
   -- | How the rule describes itself, for the report.
   ruleInfo :: r -> RuleInfo
 
--- | A module rule with its options applied.
+-- | A module rule with its options applied. The setting is gone by
+-- | here: `perModule` handed it to the check and printed it for the
+-- | report, so a set can hold rules configured every which way.
 newtype ModuleRule = ModuleRule
   { exclude :: Array (LintExemption (CST.Module Void))
   , disabled :: Boolean
-  , rule :: ModuleLint
+  , check :: LintContext -> CST.Module Void -> LintResult (CST.Module Void)
+  , info :: RuleInfo
   }
 
--- | Run this rule once per module.
-perModule :: ModuleLint -> ModuleRule
-perModule check =
-  ModuleRule { exclude: [], disabled: false, rule: check }
+-- | Run this rule once per module, at this setting.
+perModule :: ∀ cfg. ModuleLint cfg -> cfg -> ModuleRule
+perModule lint config = ModuleRule
+  { exclude: []
+  , disabled: false
+  , check: lint.rule config
+  , info: ruleInfoOf lint
+  }
+
+-- | Run a rule that has nothing to configure once per module.
+perModule_ :: ModuleLint Unit -> ModuleRule
+perModule_ lint = perModule lint unit
 
 instance RuleOptions ModuleRule where
   disabled d (ModuleRule r) = ModuleRule (r { disabled = d })
@@ -217,26 +241,29 @@ instance HasExclude ModuleRule (CST.Module Void) where
 instance RuleLike ModuleRule (CST.Module Void) where
   ruleDisabled (ModuleRule r) = r.disabled
   ruleExclude (ModuleRule r) = r.exclude
-  ruleCheck (ModuleRule r) = r.rule.rule
-  ruleInfo (ModuleRule r) =
-    { name: r.rule.name
-    , description: r.rule.description
-    , goodExamples: r.rule.goodExamples
-    , badExamples: r.rule.badExamples
-    , exampleConfig: r.rule.exampleConfig
-    }
+  ruleCheck (ModuleRule r) = r.check
+  ruleInfo (ModuleRule r) = r.info
 
 -- | A declaration rule with its options applied.
 newtype DeclarationRule = DeclarationRule
   { exclude :: Array (LintExemption (CST.Declaration Void))
   , disabled :: Boolean
-  , rule :: DeclarationLint
+  , check :: LintContext -> CST.Declaration Void -> LintResult (CST.Declaration Void)
+  , info :: RuleInfo
   }
 
--- | Run this rule once per top-level declaration.
-perDecl :: DeclarationLint -> DeclarationRule
-perDecl check =
-  DeclarationRule { exclude: [], disabled: false, rule: check }
+-- | Run this rule once per top-level declaration, at this setting.
+perDecl :: ∀ cfg. DeclarationLint cfg -> cfg -> DeclarationRule
+perDecl lint config = DeclarationRule
+  { exclude: []
+  , disabled: false
+  , check: lint.rule config
+  , info: ruleInfoOf lint
+  }
+
+-- | Run a rule that has nothing to configure once per declaration.
+perDecl_ :: DeclarationLint Unit -> DeclarationRule
+perDecl_ lint = perDecl lint unit
 
 instance RuleOptions DeclarationRule where
   disabled d (DeclarationRule r) = DeclarationRule (r { disabled = d })
@@ -247,27 +274,30 @@ instance HasExclude DeclarationRule (CST.Declaration Void) where
 instance RuleLike DeclarationRule (CST.Declaration Void) where
   ruleDisabled (DeclarationRule r) = r.disabled
   ruleExclude (DeclarationRule r) = r.exclude
-  ruleCheck (DeclarationRule r) = r.rule.rule
-  ruleInfo (DeclarationRule r) =
-    { name: r.rule.name
-    , description: r.rule.description
-    , goodExamples: r.rule.goodExamples
-    , badExamples: r.rule.badExamples
-    , exampleConfig: r.rule.exampleConfig
-    }
+  ruleCheck (DeclarationRule r) = r.check
+  ruleInfo (DeclarationRule r) = r.info
 
 -- | An expression rule with its options applied.
 newtype ExprRule = ExprRule
   { exclude :: Array (LintExemption (CST.Expr Void))
   , disabled :: Boolean
-  , rule :: ExprLint
+  , check :: LintContext -> CST.Expr Void -> LintResult (CST.Expr Void)
+  , info :: RuleInfo
   }
 
 -- | Run this rule over every expression, bottom-up, so a rewrite is
 -- | visible to the rules that see the enclosing expression.
-perExpr :: ExprLint -> ExprRule
-perExpr check =
-  ExprRule { exclude: [], disabled: false, rule: check }
+perExpr :: ∀ cfg. ExprLint cfg -> cfg -> ExprRule
+perExpr lint config = ExprRule
+  { exclude: []
+  , disabled: false
+  , check: lint.rule config
+  , info: ruleInfoOf lint
+  }
+
+-- | Run a rule that has nothing to configure over every expression.
+perExpr_ :: ExprLint Unit -> ExprRule
+perExpr_ lint = perExpr lint unit
 
 instance RuleOptions ExprRule where
   disabled d (ExprRule r) = ExprRule (r { disabled = d })
@@ -278,13 +308,29 @@ instance HasExclude ExprRule (CST.Expr Void) where
 instance RuleLike ExprRule (CST.Expr Void) where
   ruleDisabled (ExprRule r) = r.disabled
   ruleExclude (ExprRule r) = r.exclude
-  ruleCheck (ExprRule r) = r.rule.rule
-  ruleInfo (ExprRule r) =
-    { name: r.rule.name
-    , description: r.rule.description
-    , goodExamples: r.rule.goodExamples
-    , badExamples: r.rule.badExamples
-    , exampleConfig: r.rule.exampleConfig
+  ruleCheck (ExprRule r) = r.check
+  ruleInfo (ExprRule r) = r.info
+
+-- | Everything a report needs of a rule, taken while its setting is
+-- | still in scope.
+ruleInfoOf
+  :: ∀ cfg r
+   . { name :: String
+     , description :: String
+     , examples :: Maybe (Examples cfg)
+     | r
+     }
+  -> RuleInfo
+ruleInfoOf lint =
+  { name: lint.name
+  , description: lint.description
+  , examples: map printed lint.examples
+  }
+  where
+  printed examples =
+    { config: examples.printConfig examples.config
+    , good: examples.good
+    , bad: examples.bad
     }
 
 -- | A rule's own description of itself, carried alongside anything it
@@ -292,9 +338,11 @@ instance RuleLike ExprRule (CST.Expr Void) where
 type RuleInfo =
   { name :: String
   , description :: String
-  , goodExamples :: Array String
-  , badExamples :: Array String
-  , exampleConfig :: Maybe String
+  , examples :: Maybe
+      { config :: Maybe String
+      , good :: Array String
+      , bad :: Array String
+      }
   }
 
 -- | A rule, and the groups it was written under.

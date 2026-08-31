@@ -90,7 +90,7 @@ workspace:
 ## What a rule is
 
 A rule is a record: a name, a description, an example of each side, and a
-function from some piece of syntax to a verdict.
+function from a setting and some piece of syntax to a verdict.
 
 <!-- PD_START:purs
 filePath: test/Test/Lint/ReadmeExample.purs
@@ -100,14 +100,17 @@ pick:
 -->
 
 ```purescript
-maxFunctionArity :: Int -> DeclarationLint
-maxFunctionArity maxArity =
+maxFunctionArity :: DeclarationLint Int
+maxFunctionArity =
   { name: "max-function-arity"
   , description: "Flags a function with more arguments than allowed."
-  , goodExamples: [ "resize { width, height } img = img" ]
-  , badExamples: [ "resize width height quality img = img" ]
-  , exampleConfig: Just ("maxFunctionArity " <> show maxArity)
-  , rule: \_context decl -> case decl of
+  , examples: Just
+      { config: 3
+      , printConfig: \n -> Just ("max arity " <> show n)
+      , good: [ "resize { width, height } img = img" ]
+      , bad: [ "resize width height quality img = img" ]
+      }
+  , rule: \maxArity _context decl -> case decl of
       DeclValue { name: Name { name: Ident n }, binders }
         | Array.length binders > maxArity ->
             violations
@@ -118,10 +121,17 @@ maxFunctionArity maxArity =
 
 <!-- PD_END -->
 
-Configuration is an argument: `maxFunctionArity 3` is a rule, and
-`maxFunctionArity 6` is a different one. Examples are read against a
-setting, so `exampleConfig` says which one, and the report prints it
-beside them.
+A rule is a family rather than one check. Its setting arrives where it
+joins a rule set, so `perDecl maxFunctionArity 4` and
+`perDecl maxFunctionArity 6` come from one definition, and every setting
+a project runs at is visible in the one file that assembles them. A rule
+with nothing to configure uses `perDecl_`.
+
+Examples are read against a setting of their own - two nested lambdas are
+fine at a depth of two and a violation at one - so they carry it, and
+`printConfig` is how the rule words it for a report. `Just <<< show` where
+the value speaks for itself, `\_ -> Nothing` where there is nothing to
+configure.
 
 <!-- PD_START:purs
 filePath: src/Lint/Internal/Rule.purs
@@ -162,6 +172,9 @@ A rule is written at one of these levels:
 | `perModule` | one module |
 | `perPackage` / `perWorkspace` | a survey of many modules |
 
+Each takes the rule and its setting. The `_` variants - `perDecl_` and
+the rest - are for rules with nothing to configure.
+
 ## Defining a rule set
 
 ```purescript
@@ -171,11 +184,11 @@ import Lint.RuleSet.Do as Rules
 myRules :: Array Rule
 myRules = Rules.do
   group "Declarations" Rules.do
-    rule $ perDecl (maxFunctionArity 4)
-    rule $ perDecl myDeclarationRule
+    rule $ perDecl maxFunctionArity 4
+    rule $ perDecl_ myDeclarationRule
 
   group "Modules" Rules.do
-    rule $ perModule myModuleRule
+    rule $ perModule_ myModuleRule
 ```
 
 ## Exemptions
@@ -195,7 +208,7 @@ pick:
 
 ```purescript
 arityUnlessGenerated :: DeclarationRule
-arityUnlessGenerated = exclude [ generatedCode ] (perDecl (maxFunctionArity 3))
+arityUnlessGenerated = exclude [ generatedCode ] (perDecl maxFunctionArity 3)
 
 generatedCode :: LintExemption (CST.Declaration Void)
 generatedCode =
@@ -254,7 +267,7 @@ was not met. A rule explains itself once, however many things it found.
 ```
 ● Declarations » max-function-arity
     Flags a function with more arguments than allowed.
-      with  maxFunctionArity 3
+      with  max arity 3
       good  resize { width, height } img = img
       bad   resize width height quality img = img
 

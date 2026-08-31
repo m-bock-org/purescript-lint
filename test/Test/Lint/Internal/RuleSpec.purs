@@ -17,7 +17,7 @@ import Lint.Internal.Rule
   , disabled
   , exclude
   , fixed
-  , perModule
+  , perModule_
   , runRules
   , violations
   , withHint
@@ -44,54 +44,44 @@ context =
   , kind: SourceModule
   }
 
-alwaysViolates :: ModuleLint
+alwaysViolates :: ModuleLint Unit
 alwaysViolates =
   { name: "always-violates"
   , description: "Always fails, so a test can see what the runner does with a violation."
-  , goodExamples: []
-  , badExamples: []
-  , exampleConfig: Nothing
-  , rule: \_context _mod -> violations [ "nope" ]
+  , examples: Nothing
+  , rule: \_config _context _mod -> violations [ "nope" ]
   }
 
-alwaysFixes :: ModuleLint
+alwaysFixes :: ModuleLint Unit
 alwaysFixes =
   { name: "always-fixes"
   , description: "Always reports a fix, without actually changing anything."
-  , goodExamples: []
-  , badExamples: []
-  , exampleConfig: Nothing
-  , rule: \_context mod -> fixed mod
+  , examples: Nothing
+  , rule: \_config _context mod -> fixed mod
   }
 
-manyFindings :: ModuleLint
+manyFindings :: ModuleLint Unit
 manyFindings =
   { name: "many-findings"
   , description: "Reports three findings at once, the way a module-level rule does."
-  , goodExamples: []
-  , badExamples: []
-  , exampleConfig: Nothing
-  , rule: \_context _mod -> violations [ "first", "second", "third" ]
+  , examples: Nothing
+  , rule: \_config _context _mod -> violations [ "first", "second", "third" ]
   }
 
-findsNothing :: ModuleLint
+findsNothing :: ModuleLint Unit
 findsNothing =
   { name: "finds-nothing"
   , description: "Computes an empty list of findings, which is how a rule passes."
-  , goodExamples: []
-  , badExamples: []
-  , exampleConfig: Nothing
-  , rule: \_context _mod -> violations []
+  , examples: Nothing
+  , rule: \_config _context _mod -> violations []
   }
 
-hinted :: ModuleLint
+hinted :: ModuleLint Unit
 hinted =
   { name: "hinted"
   , description: "Carries a suggestion that belongs to the rule rather than to one finding."
-  , goodExamples: []
-  , badExamples: []
-  , exampleConfig: Nothing
-  , rule: \_context _mod -> withHint "try harder" (violations [ "first", "second" ])
+  , examples: Nothing
+  , rule: \_config _context _mod -> withHint "try harder" (violations [ "first", "second" ])
   }
 
 runRulesSpec :: Spec Unit
@@ -99,13 +89,13 @@ runRulesSpec = describe "runRules" do
 
   it "names the rule that made each finding" do
     let
-      outcome = runRules context [ { groups: [], rule: perModule alwaysViolates } ] sampleModule
+      outcome = runRules context [ { groups: [], rule: perModule_ alwaysViolates } ] sampleModule
     map (_.rule.name) outcome.violations `shouldEqual` [ "always-violates" ]
 
   it "collects a rule's violation" do
     let
       outcome = runRules context
-        [ { groups: [], rule: perModule alwaysViolates } ]
+        [ { groups: [], rule: perModule_ alwaysViolates } ]
         sampleModule
     map _.message outcome.violations `shouldEqual` [ "nope" ]
     outcome.fixed `shouldEqual` false
@@ -117,7 +107,7 @@ runRulesSpec = describe "runRules" do
   it "skips a disabled rule" do
     let
       outcome = runRules context
-        [ { groups: [], rule: disabled true (perModule alwaysViolates) } ]
+        [ { groups: [], rule: disabled true (perModule_ alwaysViolates) } ]
         sampleModule
     map _.message outcome.violations `shouldEqual` []
 
@@ -125,7 +115,7 @@ runRulesSpec = describe "runRules" do
     let
       outcome = runRules context
         [ { groups: [], rule: exclude [ { name: "by design", appliesTo: \_ _ -> true } ]
-            (perModule alwaysViolates) } ]
+            (perModule_ alwaysViolates) } ]
         sampleModule
     map _.message outcome.violations `shouldEqual` []
 
@@ -133,14 +123,14 @@ runRulesSpec = describe "runRules" do
     let
       outcome = runRules context
         [ { groups: [], rule: exclude [ { name: "by design", appliesTo: \_ _ -> false } ]
-            (perModule alwaysViolates) } ]
+            (perModule_ alwaysViolates) } ]
         sampleModule
     map _.message outcome.violations `shouldEqual` [ "nope" ]
 
   it "marks the outcome fixed when a rule rewrites" do
     let
       outcome = runRules context
-        [ { groups: [], rule: perModule alwaysFixes } ]
+        [ { groups: [], rule: perModule_ alwaysFixes } ]
         sampleModule
     outcome.fixed `shouldEqual` true
     map _.message outcome.violations `shouldEqual` []
@@ -148,21 +138,21 @@ runRulesSpec = describe "runRules" do
   it "reports every finding a rule made, not just the first" do
     let
       outcome = runRules context
-        [ { groups: [], rule: perModule manyFindings } ]
+        [ { groups: [], rule: perModule_ manyFindings } ]
         sampleModule
     map _.message outcome.violations `shouldEqual` [ "first", "second", "third" ]
 
   it "passes when a rule finds nothing" do
     let
       outcome = runRules context
-        [ { groups: [], rule: perModule findsNothing } ]
+        [ { groups: [], rule: perModule_ findsNothing } ]
         sampleModule
     map _.message outcome.violations `shouldEqual` []
 
   it "attaches a hint to every finding, not just the first" do
     let
       outcome = runRules context
-        [ { groups: [], rule: perModule hinted } ]
+        [ { groups: [], rule: perModule_ hinted } ]
         sampleModule
     map _.message outcome.violations `shouldEqual` [ "first", "second" ]
     map _.hint outcome.violations `shouldEqual`
@@ -171,7 +161,7 @@ runRulesSpec = describe "runRules" do
   it "runs every rule, not just the first to fire" do
     let
       outcome = runRules context
-        [ { groups: [], rule: perModule alwaysViolates }, { groups: [], rule: perModule alwaysViolates } ]
+        [ { groups: [], rule: perModule_ alwaysViolates }, { groups: [], rule: perModule_ alwaysViolates } ]
         sampleModule
     map _.message outcome.violations `shouldEqual` [ "nope", "nope" ]
 
