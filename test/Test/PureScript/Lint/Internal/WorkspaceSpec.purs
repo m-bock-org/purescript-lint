@@ -12,7 +12,7 @@ spec :: Spec Unit
 spec = describe "moduleGlob" do
 
   it "builds a glob for a package nested in the repo" do
-    moduleGlob "purs/api/kraken" "src" `shouldEqual` "purs/api/kraken/src/**/*.purs"
+    moduleGlob "packages/parser" "src" `shouldEqual` "packages/parser/src/**/*.purs"
 
   it "builds a glob for a package at the repo root, which spago reports as ./" do
     moduleGlob "./" "src" `shouldEqual` "src/**/*.purs"
