@@ -7,17 +7,17 @@
         "purescript-overlay": "purescript-overlay"
       },
       "locked": {
-        "lastModified": 1788175977,
-        "narHash": "sha256-Edt4RCd1S6xyUK42Wz15Zeb3r0CwXmvb4EXx1lTHLSM=",
+        "lastModified": 1788180661,
+        "narHash": "sha256-84Qz+W55GgzZaNRNfCKhjF9IA6NZU+9KuG56pmxKXtU=",
         "ref": "refs/heads/main",
-        "rev": "da6e2edbdddfb8a9f5ca76db3ea826f59f970487",
-        "revCount": 9,
+        "rev": "a77a185667d5065f7ea7f6ce0ab30692887b727c",
+        "revCount": 10,
         "type": "git",
-        "url": "ssh://git@github-al-dente/m-bock/al-dente"
+        "url": "ssh://git@github.com/m-bock/al-dente"
       },
       "original": {
         "type": "git",
-        "url": "ssh://git@github-al-dente/m-bock/al-dente"
+        "url": "ssh://git@github.com/m-bock/al-dente"
       }
     },
     "flake-compat": {
