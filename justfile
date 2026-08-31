@@ -1,4 +1,8 @@
-export PATH := justfile_directory() / "node_modules/.bin:" + env_var('PATH')
+# Deliberately NOT putting node_modules/.bin on PATH. package.json still
+# carries purs/spago/purs-tidy because CI installs them with npm, but a
+# recipe run inside `nix develop` must use the compiler the flake pins -
+# and node_modules/.bin first on PATH silently wins over it. The two
+# agreed at 0.15.16 by luck; ^0.15.15 drifts on the next npm install.
 set shell := ["bash", "-c"]
 
 build:
@@ -36,3 +40,20 @@ docs-check:
     diff -u "$before" README.md
 
 check: strict test docs-check
+
+# Restore output/ from the Nix build rather than compiling it here. A
+# copy, not symlinks: purs writes into output/<Module>/ in place, and a
+# read-only store symlink dies on the first local edit.
+output:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    built="$(nix build .#default --no-link --print-out-paths)"
+    rm -rf output
+    cp -aL "$built" output
+    chmod -R u+w output
+    echo "output/ restored from $built"
+
+# The toolchain the editor runs, materialised so the .vscode wrappers
+# skip a Nix evaluation on every call.
+ide-setup:
+    nix build .#toolchain -o .vscode/.toolchain

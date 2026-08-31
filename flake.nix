@@ -27,6 +27,29 @@
       {
         packages.default = workspace.output;
 
+        # The npm side of this repo, built by Nix rather than by a `npm ci`
+        # you have to remember. Only patchdown needs it - its FFI imports
+        # js-yaml at runtime - but "only" is how a second way to build
+        # gets in. --ignore-scripts because the purescript/spago/purs-tidy
+        # entries in package.json fetch binaries on install: CI still uses
+        # them, nothing here does.
+        packages.nodeModules = pkgs.buildNpmPackage {
+          pname = "lint-purs-node-modules";
+          version = "0.0.1";
+          src = pkgs.lib.fileset.toSource {
+            root = ./.;
+            fileset = pkgs.lib.fileset.unions [ ./package.json ./package-lock.json ];
+          };
+          npmDepsHash = "sha256-QZf4yf78uVWml4qWOb9a4MfYpDdEsY6lv6yeFNQru98=";
+          npmFlags = [ "--ignore-scripts" ];
+          dontNpmBuild = true;
+          installPhase = ''
+            runHook preInstall
+            cp -r node_modules $out
+            runHook postInstall
+          '';
+        };
+
         # What the editor runs, so it never reaches for a globally
         # installed compiler or the one under node_modules.
         packages.toolchain = pkgs.symlinkJoin {
@@ -45,6 +68,21 @@
 
         devShells.default = pkgs.mkShell {
           name = "lint-purs";
+
+          # A marker that you are inside the dev shell. `nix develop` used
+          # to do this itself and stopped, and the difference matters here:
+          # outside it, `purs` is whatever is installed globally.
+          shellHook = ''
+            case $- in *i*) export PS1="NIX:$PS1" ;; esac
+
+            # patchdown's FFI imports js-yaml at runtime, so the docs
+            # step needs node_modules. Linked from the store rather than
+            # left to `npm ci`, so there is one way to get a working tree.
+            if [ ! -e node_modules ]; then
+              ln -s ${self.packages.${system}.nodeModules} node_modules
+            fi
+          '';
+
           packages = [
             lib.defaults.purs
             lib.defaults.spago
