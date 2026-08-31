@@ -6,6 +6,7 @@ import Effect (Effect)
 import Test.PureScript.Lint.Internal.RuleSetSpec as RuleSetSpec
 import Test.PureScript.Lint.Internal.RuleSpec as RuleSpec
 import Test.PureScript.Lint.Internal.WorkspaceSpec as WorkspaceSpec
+import Test.PureScript.Lint.ReadmeExampleSpec as ReadmeExampleSpec
 import Test.Spec.Reporter.Console (consoleReporter)
 import Test.Spec.Runner.Node (runSpecAndExitProcess)
 
@@ -15,3 +16,4 @@ main =
     RuleSpec.spec
     RuleSetSpec.spec
     WorkspaceSpec.spec
+    ReadmeExampleSpec.spec
