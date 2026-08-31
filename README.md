@@ -77,15 +77,6 @@ full = quick <> Rules.do
 
 `group` is presentation only - it names a section in the output.
 
-A rule set is an `Array Rule`, so one set builds on another with `<>`.
-Above, `quick` is what you want running while a function is still being
-restructured, and `full` is what CI runs. Picking between them belongs to
-the caller, which is also where an unrecognised choice can be reported as
-an error.
-
-Rules can be excluded per module, with a reason attached, so an exemption
-records *why* rather than just switching something off.
-
 ## Writing a rule
 
 A rule is a value, so a new one is a module that exports a record. Here
