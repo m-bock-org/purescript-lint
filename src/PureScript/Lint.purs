@@ -29,13 +29,12 @@ import PureScript.Lint.Internal.Rule
   , Finding
   , LintContext
   , ModuleExemption
-  , RuleInfo
   , RuleOutcome
   , runRules
   )
 import PureScript.Lint.Internal.RuleSet (FlatRules, Rule, flattenRules)
 import PureScript.Lint.Internal.Survey (PackageSurvey, SurveyModule, runSurveyRules)
-import PureScript.Lint.Internal.Workspace (Workspace, WorkspaceModule)
+import PureScript.Lint.Internal.Workspace (WorkspaceModule)
 import PureScript.Lint.Internal.Workspace as Workspace
 
 -- | Run a rule set over the Spago workspace in the current directory,
@@ -79,13 +78,6 @@ reportSurvey { flatRules } surveys = do
     findings = perPackage <> perWorkspace
   for_ findings \msg -> log ("  " <> msg)
   pure (Array.length findings)
-
-ruleCount :: FlatRules -> Int
-ruleCount flatRules = Array.length flatRules.modules
-  + Array.length flatRules.declarations
-  + Array.length flatRules.expressions
-  + Array.length flatRules.packages
-  + Array.length flatRules.workspaces
 
 -- | `skipModules` names modules no rule should see at all.
 type LintOptions = { skipModules :: Array ModuleExemption }
@@ -142,22 +134,6 @@ printSummary total withFindings moduleCount = do
     , show moduleCount
     , " modules"
     ]
-
--- | Every rule that fired, each explaining itself once.
-printRulesThatFired :: Array RuleInfo -> Aff Unit
-printRulesThatFired fired =
-  let
-    distinct = Array.nubBy (\a b -> compare a.name b.name) fired
-  in
-    unless (Array.null distinct) do
-      log ""
-      log "---"
-      for_ distinct \r -> do
-        log ""
-        log r.name
-        log ("  " <> r.description)
-        for_ r.goodExample \e -> log ("    good  " <> e)
-        for_ r.badExample \e -> log ("    bad   " <> e)
 
 lintModule :: Configured -> String -> WorkspaceModule -> Aff ModuleScan
 lintModule { skipModules, flatRules } packageName workspaceModule = do
@@ -240,16 +216,3 @@ lintExprsInDecl exprRules context decl =
         { violations: [], fixed: false }
   in
     { result, fixed: finalState.fixed, violations: finalState.violations }
-
-printWorkspace :: Workspace -> Aff Unit
-printWorkspace { packages } = do
-  log $ fold
-    [ "Linter: "
-    , show (Array.length packages)
-    , " local packages, "
-    , show $ Array.length $ Array.concatMap _.modules packages
-    , " modules"
-    ]
-  for_ packages \{ name, modules } -> do
-    log $ fold [ "  ", name, " (", show (Array.length modules), ")" ]
-    for_ modules \{ path } -> log ("    " <> path)
