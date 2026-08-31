@@ -68,8 +68,8 @@ type WorkspaceSurvey = { packages :: Array PackageSurvey }
 type PackageLint =
   { name :: String
   , description :: String
-  , goodExample :: Maybe String
-  , badExample :: Maybe String
+  , goodExamples :: Array String
+  , badExamples :: Array String
   , rule :: PackageSurvey -> Array SurveyFinding
   }
 
@@ -77,8 +77,8 @@ type PackageLint =
 type WorkspaceLint =
   { name :: String
   , description :: String
-  , goodExample :: Maybe String
-  , badExample :: Maybe String
+  , goodExamples :: Array String
+  , badExamples :: Array String
   , rule :: WorkspaceSurvey -> Array SurveyFinding
   }
 

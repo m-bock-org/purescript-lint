@@ -21,8 +21,8 @@ noopModule :: ModuleLint
 noopModule =
   { name: "noop-module"
   , description: "Passes. Only its shape matters here."
-  , goodExample: Nothing
-  , badExample: Nothing
+  , goodExamples: []
+  , badExamples: []
   , rule: \_context _value -> violations []
   }
 
@@ -30,8 +30,8 @@ noopDecl :: DeclarationLint
 noopDecl =
   { name: "noop-decl"
   , description: "Passes. Only its shape matters here."
-  , goodExample: Nothing
-  , badExample: Nothing
+  , goodExamples: []
+  , badExamples: []
   , rule: \_context _value -> violations []
   }
 
@@ -39,8 +39,8 @@ noopExpr :: ExprLint
 noopExpr =
   { name: "noop-expr"
   , description: "Passes. Only its shape matters here."
-  , goodExample: Nothing
-  , badExample: Nothing
+  , goodExamples: []
+  , badExamples: []
   , rule: \_context _value -> violations []
   }
 

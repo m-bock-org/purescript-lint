@@ -98,8 +98,8 @@ type LintContext =
 type ModuleLint =
   { name :: String
   , description :: String
-  , goodExample :: Maybe String
-  , badExample :: Maybe String
+  , goodExamples :: Array String
+  , badExamples :: Array String
   , rule :: LintContext -> CST.Module Void -> LintResult (CST.Module Void)
   }
 
@@ -107,8 +107,8 @@ type ModuleLint =
 type DeclarationLint =
   { name :: String
   , description :: String
-  , goodExample :: Maybe String
-  , badExample :: Maybe String
+  , goodExamples :: Array String
+  , badExamples :: Array String
   , rule :: LintContext -> CST.Declaration Void -> LintResult (CST.Declaration Void)
   }
 
@@ -116,8 +116,8 @@ type DeclarationLint =
 type ExprLint =
   { name :: String
   , description :: String
-  , goodExample :: Maybe String
-  , badExample :: Maybe String
+  , goodExamples :: Array String
+  , badExamples :: Array String
   , rule :: LintContext -> CST.Expr Void -> LintResult (CST.Expr Void)
   }
 
@@ -145,7 +145,7 @@ skipWhen { exemptions, check } context value =
     (Array.find (\exemption -> exemption.appliesTo context value) exemptions)
 
 -- | Strip a leading and trailing blank line and the shared indentation
--- | from the rest, so a `goodExample` can be written indented to match
+-- | from the rest, so an example can be written indented to match
 -- | the code around it.
 dedent :: String -> String
 dedent raw =
@@ -218,8 +218,8 @@ instance RuleLike ModuleRule (CST.Module Void) where
   ruleInfo (ModuleRule r) =
     { name: r.rule.name
     , description: r.rule.description
-    , goodExample: r.rule.goodExample
-    , badExample: r.rule.badExample
+    , goodExamples: r.rule.goodExamples
+    , badExamples: r.rule.badExamples
     }
 
 -- | A declaration rule with its options applied.
@@ -247,8 +247,8 @@ instance RuleLike DeclarationRule (CST.Declaration Void) where
   ruleInfo (DeclarationRule r) =
     { name: r.rule.name
     , description: r.rule.description
-    , goodExample: r.rule.goodExample
-    , badExample: r.rule.badExample
+    , goodExamples: r.rule.goodExamples
+    , badExamples: r.rule.badExamples
     }
 
 -- | An expression rule with its options applied.
@@ -277,8 +277,8 @@ instance RuleLike ExprRule (CST.Expr Void) where
   ruleInfo (ExprRule r) =
     { name: r.rule.name
     , description: r.rule.description
-    , goodExample: r.rule.goodExample
-    , badExample: r.rule.badExample
+    , goodExamples: r.rule.goodExamples
+    , badExamples: r.rule.badExamples
     }
 
 -- | A rule's own description of itself, carried alongside anything it
@@ -286,8 +286,8 @@ instance RuleLike ExprRule (CST.Expr Void) where
 type RuleInfo =
   { name :: String
   , description :: String
-  , goodExample :: Maybe String
-  , badExample :: Maybe String
+  , goodExamples :: Array String
+  , badExamples :: Array String
   }
 
 -- | A rule, and the groups it was written under.

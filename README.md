@@ -102,8 +102,8 @@ maxFunctionArity :: Int -> DeclarationLint
 maxFunctionArity maxArity =
   { name: "max-function-arity"
   , description: "Flags a function with more arguments than allowed."
-  , goodExample: Just "resize { width, height } img = ..."
-  , badExample: Just "resize width height img = ..."
+  , goodExamples: [ "resize { width, height } img = ..." ]
+  , badExamples: [ "resize width height img = ..." ]
   , rule: \_context decl -> case decl of
       DeclValue { name: Name { name: Ident n }, binders }
         | Array.length binders > maxArity ->

@@ -48,8 +48,8 @@ alwaysViolates :: ModuleLint
 alwaysViolates =
   { name: "always-violates"
   , description: "Always fails, so a test can see what the runner does with a violation."
-  , goodExample: Nothing
-  , badExample: Nothing
+  , goodExamples: []
+  , badExamples: []
   , rule: \_context _mod -> violations [ "nope" ]
   }
 
@@ -57,8 +57,8 @@ alwaysFixes :: ModuleLint
 alwaysFixes =
   { name: "always-fixes"
   , description: "Always reports a fix, without actually changing anything."
-  , goodExample: Nothing
-  , badExample: Nothing
+  , goodExamples: []
+  , badExamples: []
   , rule: \_context mod -> fixed mod
   }
 
@@ -66,8 +66,8 @@ manyFindings :: ModuleLint
 manyFindings =
   { name: "many-findings"
   , description: "Reports three findings at once, the way a module-level rule does."
-  , goodExample: Nothing
-  , badExample: Nothing
+  , goodExamples: []
+  , badExamples: []
   , rule: \_context _mod -> violations [ "first", "second", "third" ]
   }
 
@@ -75,8 +75,8 @@ findsNothing :: ModuleLint
 findsNothing =
   { name: "finds-nothing"
   , description: "Computes an empty list of findings, which is how a rule passes."
-  , goodExample: Nothing
-  , badExample: Nothing
+  , goodExamples: []
+  , badExamples: []
   , rule: \_context _mod -> violations []
   }
 
@@ -84,8 +84,8 @@ hinted :: ModuleLint
 hinted =
   { name: "hinted"
   , description: "Carries a suggestion that belongs to the rule rather than to one finding."
-  , goodExample: Nothing
-  , badExample: Nothing
+  , goodExamples: []
+  , badExamples: []
   , rule: \_context _mod -> withHint "try harder" (violations [ "first", "second" ])
   }
 
