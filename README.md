@@ -3,9 +3,8 @@
   <img alt="purescript-lint" src="assets/logo-light.png" width="480">
 </picture>
 
-A lint engine for PureScript, written in PureScript. Rules are ordinary
-values and a rule set is a program you write, so using it means writing
-PureScript.
+A lint engine for PureScript, written in PureScript. A rule set is a
+program you write, so using it means writing PureScript.
 
 It reads a Spago workspace, parses each module with
 [`language-cst-parser`](https://github.com/natefaubion/purescript-language-cst-parser),
@@ -39,6 +38,28 @@ maxFunctionArity maxArity =
 
 Configuration is an argument: `maxFunctionArity 4` is a rule, and
 `maxFunctionArity 6` is a different one.
+
+<!-- PD_START:purs
+filePath: src/PureScript/Lint/Internal/Rule.purs
+pick:
+  - tag: signature
+    name: violation
+  - tag: signature
+    name: violations
+  - tag: signature
+    name: fixed
+  - tag: signature
+    name: withHint
+-->
+
+```purescript
+violation :: ∀ a. String -> LintResult a
+violations :: ∀ a. Array String -> LintResult a
+fixed :: ∀ a. a -> LintResult a
+withHint :: ∀ a. String -> LintResult a -> LintResult a
+```
+
+<!-- PD_END -->
 
 A verdict is built with `violation` for one finding, `violations` for
 however many a rule found, or `fixed` with rewritten syntax. There is no
@@ -85,6 +106,25 @@ myRules = Rules.do
 
 ## Running it
 
+<!-- PD_START:purs
+filePath: src/PureScript/Lint.purs
+pick:
+  - tag: signature
+    name: runLinter
+  - tag: signature
+    name: runLinterWith
+  - tag: type
+    name: LintOptions
+-->
+
+```purescript
+runLinter :: Array Rule -> Aff Int
+runLinterWith :: LintOptions -> Array Rule -> Aff Int
+type LintOptions = { skipModules :: Array ModuleExemption }
+```
+
+<!-- PD_END -->
+
 ```purescript
 module Main where
 
@@ -92,16 +132,21 @@ import PureScript.Lint (runLinter)
 
 main :: Effect Unit
 main = launchAff_ do
-  exitCode <- runLinter
-    { rules: myRules
-    , excludeRules: []
-    , globalExclude: []
-    }
+  exitCode <- runLinter myRules
   liftEffect (exit exitCode)
 ```
 
-`excludeRules` names rules to skip outright; `globalExclude` names files
-no rule should see. Run it from a Spago project directory.
+Run it from a Spago project directory.
+
+## Contributing
+
+Contributions are welcome! Please [open an issue](https://github.com/m-bock/purescript-lint/issues/new) to report bugs, suggest improvements, or propose new rules to be added.
+
+If this project was useful to you, a virtual coffee is appreciated.
+
+<a href="https://ko-fi.com/mbock">
+  <img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Buy Me a Coffee at ko-fi.com" />
+</a>
 
 ## Licence
 

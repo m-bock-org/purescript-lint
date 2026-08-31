@@ -30,6 +30,7 @@
         "test": {
           "dependencies": [
             "partial",
+            "patchdown",
             "spec",
             "spec-node"
           ]
@@ -587,6 +588,18 @@
       }
     },
     "extra_packages": {
+      "codec-argonaut": {
+        "git": "https://github.com/garyb/purescript-codec-argonaut.git",
+        "ref": "dc287c83b79f86f8d9a0045dcb740f0cf9d23ccd",
+        "dependencies": [
+          "argonaut-core",
+          "codec",
+          "foreign-object",
+          "ordered-collections",
+          "type-equality",
+          "variant"
+        ]
+      },
       "encode-decode": {
         "git": "https://github.com/m-bock/purescript-encode-decode.git",
         "ref": "07a361b0e42314ee6521b8ccc774eca117be57d0",
@@ -607,6 +620,10 @@
           "tuples",
           "typelevel-prelude"
         ]
+      },
+      "patchdown": {
+        "git": "https://github.com/m-bock/purescript-patchdown.git",
+        "ref": "7012c7a839d7c2f8e9d1a8acf9a56d9435eaccc4"
       }
     }
   },
@@ -640,6 +657,16 @@
         "foldable-traversable",
         "lists",
         "prelude"
+      ]
+    },
+    "argonaut": {
+      "type": "registry",
+      "version": "9.0.0",
+      "integrity": "sha256-M/EUEihkRu5xKGKe7UfkrybGj56SDTKz1EappEOiWgA=",
+      "dependencies": [
+        "argonaut-codecs",
+        "argonaut-core",
+        "argonaut-traversals"
       ]
     },
     "argonaut-codecs": {
@@ -681,6 +708,30 @@
         "prelude",
         "strings",
         "tailrec"
+      ]
+    },
+    "argonaut-traversals": {
+      "type": "registry",
+      "version": "10.0.0",
+      "integrity": "sha256-guTCBwDiOECrV9CvHF2cH61wa0xMNkbw2/zgl9c0QVk=",
+      "dependencies": [
+        "argonaut-codecs",
+        "argonaut-core",
+        "arrays",
+        "control",
+        "either",
+        "foldable-traversable",
+        "foreign-object",
+        "gen",
+        "integers",
+        "lists",
+        "maybe",
+        "prelude",
+        "profunctor-lenses",
+        "strings",
+        "tailrec",
+        "tuples",
+        "unfoldable"
       ]
     },
     "arraybuffer-types": {
@@ -750,6 +801,32 @@
         "unfoldable"
       ]
     },
+    "codec": {
+      "type": "registry",
+      "version": "6.1.0",
+      "integrity": "sha256-WzfYiZsnqHJ/K4IliEEOkLLmsKozy8c7/fbrGZHASOk=",
+      "dependencies": [
+        "bifunctors",
+        "control",
+        "invariant",
+        "prelude",
+        "profunctor",
+        "tuples"
+      ]
+    },
+    "codec-argonaut": {
+      "type": "git",
+      "url": "https://github.com/garyb/purescript-codec-argonaut.git",
+      "rev": "dc287c83b79f86f8d9a0045dcb740f0cf9d23ccd",
+      "dependencies": [
+        "argonaut-core",
+        "codec",
+        "foreign-object",
+        "ordered-collections",
+        "type-equality",
+        "variant"
+      ]
+    },
     "console": {
       "type": "registry",
       "version": "6.1.0",
@@ -811,6 +888,15 @@
         "partial",
         "prelude",
         "tuples"
+      ]
+    },
+    "debug": {
+      "type": "registry",
+      "version": "6.0.2",
+      "integrity": "sha256-d/EzRm/J2JyzvlIeo2Ex78Y7HRB0IXBitnVJywL4gHk=",
+      "dependencies": [
+        "functions",
+        "prelude"
       ]
     },
     "distributive": {
@@ -910,6 +996,25 @@
         "enums",
         "maybe",
         "prelude"
+      ]
+    },
+    "filterable": {
+      "type": "registry",
+      "version": "5.0.0",
+      "integrity": "sha256-be7ci1Bzwud2waqoCtNGsTBZbt7fi+gCLvGddQQRJ3A=",
+      "dependencies": [
+        "arrays",
+        "control",
+        "either",
+        "foldable-traversable",
+        "identity",
+        "lists",
+        "maybe",
+        "newtype",
+        "ordered-collections",
+        "prelude",
+        "st",
+        "tuples"
       ]
     },
     "foldable-traversable": {
@@ -1524,6 +1629,26 @@
       "integrity": "sha256-mdrlJBAgFMh79hNRW39uv7c+BwnnaOrAMmdh7+VhEhs=",
       "dependencies": []
     },
+    "patchdown": {
+      "type": "git",
+      "url": "https://github.com/m-bock/purescript-patchdown.git",
+      "rev": "7012c7a839d7c2f8e9d1a8acf9a56d9435eaccc4",
+      "dependencies": [
+        "argonaut",
+        "argonaut-core",
+        "codec-argonaut",
+        "console",
+        "debug",
+        "effect",
+        "exists",
+        "filterable",
+        "language-cst-parser",
+        "node-fs",
+        "node-process",
+        "prelude",
+        "strings-extra"
+      ]
+    },
     "pipes": {
       "type": "registry",
       "version": "8.0.0",
@@ -1573,6 +1698,34 @@
         "invariant",
         "newtype",
         "prelude",
+        "tuples"
+      ]
+    },
+    "profunctor-lenses": {
+      "type": "registry",
+      "version": "8.0.0",
+      "integrity": "sha256-mVIYR3kEMHyO2m+VicJeZeVyDJ4IgvkMzDll3JdnRN4=",
+      "dependencies": [
+        "arrays",
+        "bifunctors",
+        "const",
+        "control",
+        "distributive",
+        "either",
+        "foldable-traversable",
+        "foreign-object",
+        "functors",
+        "identity",
+        "lists",
+        "maybe",
+        "newtype",
+        "ordered-collections",
+        "partial",
+        "prelude",
+        "profunctor",
+        "record",
+        "safe-coerce",
+        "transformers",
         "tuples"
       ]
     },
@@ -1704,6 +1857,18 @@
         "unsafe-coerce"
       ]
     },
+    "strings-extra": {
+      "type": "registry",
+      "version": "4.0.0",
+      "integrity": "sha256-Wlsa9A4hg4PnZYa9WsE0e820xilquVwm33nn067qNIA=",
+      "dependencies": [
+        "arrays",
+        "foldable-traversable",
+        "prelude",
+        "strings",
+        "unicode"
+      ]
+    },
     "tailrec": {
       "type": "registry",
       "version": "6.1.0",
@@ -1776,6 +1941,21 @@
         "partial",
         "prelude",
         "tuples"
+      ]
+    },
+    "unicode": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-5KugCNyYxscmZpnMbssOQA96XimuBN/bjHpdrtd5qaY=",
+      "dependencies": [
+        "arrays",
+        "enums",
+        "integers",
+        "maybe",
+        "partial",
+        "prelude",
+        "strings",
+        "unsafe-coerce"
       ]
     },
     "unsafe-coerce": {
