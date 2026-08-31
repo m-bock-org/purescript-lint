@@ -1,8 +1,7 @@
 # purescript-lint
 
 A lint engine for PureScript, written in PureScript. Rules are ordinary
-values, so a rule set is a program you write rather than a config file you
-fill in - which also means there is no way to use it without writing
+values and a rule set is a program you write, so using it means writing
 PureScript.
 
 It reads a Spago workspace, parses each module with
@@ -24,8 +23,8 @@ maxFunctionArity :: Int -> DeclarationLint
 maxFunctionArity maxArity =
   { name: RuleName "max-function-arity"
   , description: "Flags a top-level function with more arguments than the configured maximum."
-  , goodExample: Nothing
-  , badExample: Nothing
+  , goodExample: Just "resize { width, height, quality } img = ..."
+  , badExample: Just "resize width height quality img = ..."
   , rule: \_context decl -> case decl of
       DeclValue { name: Name { name: Ident n }, binders }
         | Array.length binders > maxArity ->
@@ -34,19 +33,17 @@ maxFunctionArity maxArity =
   }
 ```
 
-That is the whole rule - nothing is elided. Note that it is a *function*
-returning a record: the configuration is just an argument, so
-`maxFunctionArity 4` is a rule and there is no config file for it to be
-configured from.
+Configuration is an argument: `maxFunctionArity 4` is a rule, and
+`maxFunctionArity 6` is a different one.
 
 A verdict is `Passed`, `Violation String`, `ViolationWithHint`, or
 `Fixed` with rewritten syntax. `Fixed` makes a rule auto-fixable, and the
 bar for it is that no judgment is left to a human - which most rules
 worth writing do not clear.
 
-There is no plugin registry and no discovery. You import the rules you
-want and put them in a list, which means an unused rule is a compile
-error rather than a line of dead config.
+You import the rules you want and put them in a list, so the compiler
+tracks them: an unused import is a compile error, and a renamed rule
+breaks the build at the call site.
 
 ## What a rule sees
 
@@ -62,28 +59,29 @@ Four levels, each a different unit of syntax:
 ## Defining a rule set
 
 ```purescript
+import PureScript.Lint.RuleSet.Do (group, rule)
 import PureScript.Lint.RuleSet.Do as Rules
 
-everything :: Array Rule
-everything = Rules.do
+quick :: Array Rule
+quick = Rules.do
   group "How much fits on one line" Rules.do
     rule $ perModule (maxLineLength { code: 100, signature: 150 })
     rule $ perModule (maxDelimiterRun 2)
 
+full :: Array Rule
+full = quick <> Rules.do
   group "How deep it goes" Rules.do
-    rule $ perExpr (maxCallStackDepth 4)
+    rule $ perModule (maxCallStackDepth 4)
     rule $ perDecl (maxLambdaNestingDepth 3)
 ```
 
 `group` is presentation only - it names a section in the output.
 
-A rule set is an `Array Rule` and nothing more - no wrapper, no name. A
-repo that wants more than one, a quick set while restructuring and the
-full set in CI, writes two arrays, and a set that builds on another is
-`quick <> rest`. That only works because there is nothing around it to
-merge. Choosing between them at the command line is the caller's job,
-which means an unrecognised name can be an error rather than a silently
-empty run.
+A rule set is an `Array Rule`, so one set builds on another with `<>`.
+Above, `quick` is what you want running while a function is still being
+restructured, and `full` is what CI runs. Picking between them belongs to
+the caller, which is also where an unrecognised choice can be reported as
+an error.
 
 Rules can be excluded per module, with a reason attached, so an exemption
 records *why* rather than just switching something off.
@@ -153,7 +151,7 @@ import PureScript.Lint (runLinter)
 
 main :: Effect Unit
 main = launchAff_ do
-  exitCode <- runLinter [] [] everything
+  exitCode <- runLinter [] [] full
   liftEffect (exit exitCode)
 ```
 
