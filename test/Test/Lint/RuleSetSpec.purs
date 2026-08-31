@@ -13,7 +13,7 @@ import PureScript.Lint.Rule
   , perModule
   , violations
   )
-import PureScript.Lint.RuleSet (flattenRules, group, rule)
+import PureScript.Lint.Internal.RuleSet (flattenRules, group, rule)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
