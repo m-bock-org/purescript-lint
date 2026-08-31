@@ -9,16 +9,19 @@ import PureScript.CST (RecoveredParserResult(..), parseModule)
 import PureScript.CST.Types (Module) as CST
 import PureScript.Lint.Rule
   ( LintContext
-  , LintResult(..)
   , ModuleLint
   , ModuleRule
   , RuleAlias(..)
   , RuleName(..)
   , disabled
   , exclude
+  , fixed
   , name
   , perModule
   , runRules
+  , violation
+  , violations
+  , withHint
   )
 import PureScript.Lint.Workspace (ModuleKind(..))
 import Test.Spec (Spec, describe, it)
@@ -47,7 +50,7 @@ alwaysViolates =
   , description: "Always fails, so a test can see what the runner does with a violation."
   , goodExample: Nothing
   , badExample: Nothing
-  , rule: \_context _mod -> Violation "nope"
+  , rule: \_context _mod -> violation "nope"
   }
 
 -- | Private. Used only by `spec`.
@@ -57,7 +60,37 @@ alwaysFixes =
   , description: "Always reports a fix, without actually changing anything."
   , goodExample: Nothing
   , badExample: Nothing
-  , rule: \_context mod -> Fixed mod
+  , rule: \_context mod -> fixed mod
+  }
+
+-- | Private. Used only by `spec`.
+manyFindings :: ModuleLint
+manyFindings =
+  { name: RuleName "many-findings"
+  , description: "Reports three findings at once, the way a module-level rule does."
+  , goodExample: Nothing
+  , badExample: Nothing
+  , rule: \_context _mod -> violations [ "first", "second", "third" ]
+  }
+
+-- | Private. Used only by `spec`.
+findsNothing :: ModuleLint
+findsNothing =
+  { name: RuleName "finds-nothing"
+  , description: "Computes an empty list of findings, which is how a rule passes."
+  , goodExample: Nothing
+  , badExample: Nothing
+  , rule: \_context _mod -> violations []
+  }
+
+-- | Private. Used only by `spec`.
+hinted :: ModuleLint
+hinted =
+  { name: RuleName "hinted"
+  , description: "Carries a suggestion that belongs to the rule rather than to one finding."
+  , goodExample: Nothing
+  , badExample: Nothing
+  , rule: \_context _mod -> withHint "try harder" (violations [ "first", "second" ])
   }
 
 spec :: Spec Unit
@@ -121,6 +154,28 @@ spec = describe "runRules" do
         sampleModule
     outcome.fixed `shouldEqual` true
     outcome.violations `shouldEqual` []
+
+  it "reports every finding a rule made, not just the first" do
+    let
+      outcome = runRules { excludeRules: [], context }
+        [ perModule manyFindings ]
+        sampleModule
+    outcome.violations `shouldEqual` [ "first", "second", "third" ]
+
+  it "passes when a rule finds nothing" do
+    let
+      outcome = runRules { excludeRules: [], context }
+        [ perModule findsNothing ]
+        sampleModule
+    outcome.violations `shouldEqual` []
+
+  it "attaches a hint to every finding, not just the first" do
+    let
+      outcome = runRules { excludeRules: [], context }
+        [ perModule hinted ]
+        sampleModule
+    outcome.violations `shouldEqual`
+      [ "first (hint: try harder)", "second (hint: try harder)" ]
 
   it "runs every rule, not just the first to fire" do
     let

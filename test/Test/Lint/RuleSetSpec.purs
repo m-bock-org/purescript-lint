@@ -7,12 +7,12 @@ import Data.Maybe (Maybe(..))
 import PureScript.Lint.Rule
   ( DeclarationLint
   , ExprLint
-  , LintResult(..)
   , ModuleLint
   , RuleName(..)
   , perDecl
   , perExpr
   , perModule
+  , violations
   )
 import PureScript.Lint.RuleSet (flattenRules, group, rule)
 import Test.Spec (Spec, describe, it)
@@ -25,7 +25,7 @@ noopModule =
   , description: "Passes. Only its shape matters here."
   , goodExample: Nothing
   , badExample: Nothing
-  , rule: \_context _value -> Passed
+  , rule: \_context _value -> violations []
   }
 
 -- | Private. Used only by `spec`.
@@ -35,7 +35,7 @@ noopDecl =
   , description: "Passes. Only its shape matters here."
   , goodExample: Nothing
   , badExample: Nothing
-  , rule: \_context _value -> Passed
+  , rule: \_context _value -> violations []
   }
 
 -- | Private. Used only by `spec`.
@@ -45,7 +45,7 @@ noopExpr =
   , description: "Passes. Only its shape matters here."
   , goodExample: Nothing
   , badExample: Nothing
-  , rule: \_context _value -> Passed
+  , rule: \_context _value -> violations []
   }
 
 spec :: Spec Unit

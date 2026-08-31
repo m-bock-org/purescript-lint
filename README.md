@@ -62,14 +62,12 @@ Four levels, each a different unit of syntax:
 import PureScript.Lint.RuleSet.Do (group, rule)
 import PureScript.Lint.RuleSet.Do as Rules
 
-quick :: Array Rule
-quick = Rules.do
+myRules :: Array Rule
+myRules = Rules.do
   group "How much fits on one line" Rules.do
     rule $ perModule (maxLineLength { code: 100, signature: 150 })
     rule $ perModule (maxDelimiterRun 2)
 
-full :: Array Rule
-full = quick <> Rules.do
   group "How deep it goes" Rules.do
     rule $ perModule (maxCallStackDepth 4)
     rule $ perDecl (maxLambdaNestingDepth 3)
@@ -86,18 +84,16 @@ import PureScript.Lint (runLinter)
 
 main :: Effect Unit
 main = launchAff_ do
-  exitCode <- runLinter [] [] full
+  exitCode <- runLinter
+    { rules: myRules
+    , excludeRules: []
+    , globalExclude: []
+    }
   liftEffect (exit exitCode)
 ```
 
-It shells out to `spago ls packages --json` to find the workspace, so run
-it from a repo root with a `spago.yaml`.
-
-## Not yet
-
-- No editor integration.
-- Fixes are applied by the caller; the engine reports them.
-- The survey API is the least settled part.
+`excludeRules` names rules to skip outright; `globalExclude` names files
+no rule should see. Run it from a Spago project directory.
 
 ## Licence
 

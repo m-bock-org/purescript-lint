@@ -1,4 +1,4 @@
-module PureScript.Lint (runLinter) where
+module PureScript.Lint (LintRun, runLinter) where
 
 import Prelude
 
@@ -29,8 +29,8 @@ import PureScript.Lint.Workspace (Workspace, WorkspaceModule)
 import PureScript.Lint.Workspace as Workspace
 
 -- | Uses `printWorkspace`, `ruleCount`, `lintModule`, `reportSurvey`.
-runLinter :: Array RuleAlias -> Array GlobalExemption -> Array Rule -> Aff Int
-runLinter excludeRules globalExclude rules = do
+runLinter :: LintRun -> Aff Int
+runLinter { excludeRules, globalExclude, rules } = do
   workspace <- Workspace.getWorkspace
   printWorkspace workspace
   let
@@ -65,6 +65,15 @@ ruleCount flatRules = Array.length flatRules.modules
   + Array.length flatRules.expressions
   + Array.length flatRules.packages
   + Array.length flatRules.workspaces
+
+-- | What one run of the linter is: the rules to run, plus the two ways
+-- | of not running them. `excludeRules` names rules to skip outright;
+-- | `globalExclude` names files no rule should see.
+type LintRun =
+  { rules :: Array Rule
+  , excludeRules :: Array RuleAlias
+  , globalExclude :: Array GlobalExemption
+  }
 
 type Configured =
   { excludeRules :: Array RuleAlias

@@ -6,7 +6,7 @@ module PureScript.Lint.Rule
   , GlobalExemption
   , LintContext
   , LintExemption
-  , LintResult(..)
+  , LintResult
   , ModuleLint
   , ModuleRule
   , RuleAlias(..)
@@ -18,6 +18,7 @@ module PureScript.Lint.Rule
   , dedent
   , disabled
   , exclude
+  , fixed
   , name
   , perDecl
   , perExpr
@@ -28,11 +29,16 @@ module PureScript.Lint.Rule
   , ruleName
   , runRules
   , skipWhen
+  , violation
+  , violations
+  , withHint
   ) where
 
 import Prelude
 
-import Data.Array (elem, filter, find, foldl, head, init, last, snoc, tail) as Array
+import Data.Array (elem, filter, find, foldl, head, init, last, tail) as Array
+import Data.Array.NonEmpty (NonEmptyArray)
+import Data.Array.NonEmpty (fromArray, singleton, toArray) as NEA
 import Data.Foldable (minimum) as Foldable
 import Data.Maybe (Maybe(..))
 import Data.Maybe (fromMaybe, maybe) as Maybe
@@ -45,9 +51,33 @@ import PureScript.Lint.Workspace (ModuleKind)
 
 data LintResult a
   = Passed
-  | Violation String
-  | ViolationWithHint String String
+  | Violations (NonEmptyArray String) (Maybe String)
   | Fixed a
+
+-- | One finding.
+violation :: ∀ a. String -> LintResult a
+violation message = Violations (NEA.singleton message) Nothing
+
+-- | Every finding a rule made. No findings is how a rule passes, so
+-- | there is no separate `passed` to reach for - and a rule that
+-- | computes its findings does not have to special-case the empty run.
+violations :: ∀ a. Array String -> LintResult a
+violations found =
+  Maybe.maybe Passed (\vs -> Violations vs Nothing) (NEA.fromArray found)
+
+-- | A rule that rewrote what it was given, rather than complaining
+-- | about it.
+fixed :: ∀ a. a -> LintResult a
+fixed = Fixed
+
+-- | Attach a suggestion to every finding of a result. A hint belongs to
+-- | the rule rather than to any one finding - the rules that carry one
+-- | say the same thing however many things they found - so it is set
+-- | here rather than passed in alongside each message.
+withHint :: ∀ a. String -> LintResult a -> LintResult a
+withHint hint = case _ of
+  Violations found _ -> Violations found (Just hint)
+  other -> other
 
 newtype RuleName = RuleName String
 
@@ -228,10 +258,12 @@ runRules { excludeRules, context } rules initial =
       | otherwise =
           case skipWhen { exemptions: ruleExclude r, check: ruleCheck r } context acc.result of
             Passed -> acc
-            Violation msg -> acc { violations = Array.snoc acc.violations msg }
-            ViolationWithHint msg hint -> acc
-              { violations = Array.snoc acc.violations (msg <> " (hint: " <> hint <> ")") }
+            Violations found hint -> acc
+              { violations = acc.violations <> map (withSuffix hint) (NEA.toArray found) }
             Fixed result -> acc { result = result, fixed = true }
+    withSuffix hint msg = case hint of
+      Just h -> msg <> " (hint: " <> h <> ")"
+      Nothing -> msg
   in
     Array.foldl applyOne { result: initial, fixed: false, violations: [] } rules
 
@@ -240,14 +272,33 @@ runRules { excludeRules, context } rules initial =
 -- every level, an empty array at a given level just means this rule
 -- has nothing to say there.
 --
--- LintResult's `Passed`/`Violation` mirror `Either`'s `Right`/`Left`;
+-- LintResult is opaque, and `violation`/`violations`/`fixed` are the
+-- only ways to build one. There is deliberately no `passed`: a rule
+-- passes by finding nothing, which is `violations []`, so the empty
+-- case is the same expression as every other case rather than a
+-- separate branch a rule has to remember.
+--
+-- It carries every finding rather than one, because that is what rules
+-- actually do. Until 2026-08-31 the type held a single `String`, and
+-- five of the nine general rules worked around it by joining their
+-- findings with `"; "`. Two things went wrong with that. The reported
+-- count came out as the number of rules that fired rather than the
+-- number of things found - a module with twelve over-long lines counted
+-- as one - and the runner could not print or anchor the findings
+-- separately, because by the time it saw them they were one string. The
+-- survey side never had this problem: `SurveyLike` returns
+-- `Array SurveyFinding` and always did.
+--
+-- The hint is a field on the violations case rather than its own
+-- constructor (it was `ViolationWithHint`), and rather than a field on
+-- each finding. Every rule that carries one says the same thing however
+-- many things it found, so it belongs to the rule. `withHint` sets it
+-- as a modifier, which keeps one constructor from becoming two and
+-- leaves the rules with nothing to suggest untouched.
+--
 -- `Fixed` is the case `Either` can't express on its own - the rule
 -- both flagged *and* rewrote the value, so the caller gets the
--- correction back instead of just the complaint. `ViolationWithHint`
--- is `Violation` plus a separate suggestion for how to fix it by hand
--- (e.g. "use do notation instead") - kept as its own constructor
--- rather than folded into `Violation`'s own string so a rule that has
--- nothing more to suggest isn't forced to invent one. LintContext
+-- correction back instead of just the complaint. LintContext
 -- carries everything about where a checked value came from that a
 -- rule might need but can't read off the value itself - a
 -- `CST.Module Void` knows nothing about its own file path or which
