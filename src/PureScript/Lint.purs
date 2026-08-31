@@ -37,15 +37,14 @@ import PureScript.Lint.Internal.Workspace (Workspace, WorkspaceModule)
 import PureScript.Lint.Internal.Workspace as Workspace
 
 -- | Run a rule set over the Spago workspace in the current directory,
--- | reporting what every rule found and returning how many findings
--- | there were.
+-- | reporting everything it finds. `true` when the workspace is clean.
 -- |
 -- | A rule that rewrites is applied: the module is written back.
-runLinter :: Array Rule -> Aff Int
+runLinter :: Array Rule -> Aff Boolean
 runLinter = runLinterWith { skipModules: [] }
 
 -- | `runLinter` with options.
-runLinterWith :: LintOptions -> Array Rule -> Aff Int
+runLinterWith :: LintOptions -> Array Rule -> Aff Boolean
 runLinterWith { skipModules } rules = do
   workspace <- Workspace.getWorkspace
   printWorkspace workspace
@@ -66,7 +65,7 @@ runLinterWith { skipModules } rules = do
   printRulesThatFired (Array.concatMap _.fired scanned)
   log ""
   log ("Linter: " <> show total <> " violation(s)")
-  pure total
+  pure (total == 0)
 
 reportSurvey :: Configured -> Array PackageSurvey -> Aff Int
 reportSurvey { flatRules } surveys = do

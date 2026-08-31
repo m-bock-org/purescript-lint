@@ -110,8 +110,8 @@ pick:
 -->
 
 ```purescript
-runLinter :: Array Rule -> Aff Int
-runLinterWith :: LintOptions -> Array Rule -> Aff Int
+runLinter :: Array Rule -> Aff Boolean
+runLinterWith :: LintOptions -> Array Rule -> Aff Boolean
 type LintOptions = { skipModules :: Array ModuleExemption }
 ```
 
@@ -124,8 +124,8 @@ import PureScript.Lint (runLinter)
 
 main :: Effect Unit
 main = launchAff_ do
-  findings <- runLinter myRules
-  liftEffect (exit (if findings == 0 then 0 else 1))
+  clean <- runLinter myRules
+  liftEffect (exit (if clean then 0 else 1))
 ```
 
 Run it from a Spago project directory.
