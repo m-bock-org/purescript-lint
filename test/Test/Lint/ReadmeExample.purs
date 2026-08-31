@@ -10,7 +10,6 @@ module Test.Lint.ReadmeExample
 import Prelude
 
 import Data.Array as Array
-import Data.Maybe (Maybe(..))
 import Data.String (Pattern(..), contains)
 import PureScript.CST.Types (Declaration(..), Ident(..), Name(..))
 import PureScript.CST.Types (Declaration) as CST

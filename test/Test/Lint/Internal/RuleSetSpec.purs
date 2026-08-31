@@ -3,7 +3,6 @@ module Test.Lint.Internal.RuleSetSpec (spec) where
 import Prelude
 
 import Data.Array (length) as Array
-import Data.Maybe (Maybe(..))
 import Lint.Rule
   ( DeclarationLint
   , ExprLint
