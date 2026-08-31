@@ -3,6 +3,8 @@
   <img alt="purescript-lint" src="assets/logo-light.png" width="480">
 </picture>
 
+<br>
+
 A lint engine for PureScript, written in PureScript. A rule set is a
 program you write, so using it means writing PureScript.
 
@@ -132,15 +134,19 @@ Run it from a Spago project directory.
 
 ## What it prints
 
-Each finding says what is wrong and which rule says so; each rule that
-fired then explains itself once, however many things it found.
+Each finding names the module, says what is wrong, and which rule says
+so. Each rule that fired then explains itself once, however many things
+it found.
 
 ```
 Linter: 2 rule(s)
-  src/Data/Json/Decode.purs: 42 decls, over 40  [max-decls]
-  src/Data/Json/Decode/Sum.purs: jErr is 4 chars (hint: spell it out)  [min-name]
-  src/Data/Json/Encode.purs: 42 decls, over 40  [max-decls]
-  test/Test/Main.purs: main is 4 chars (hint: spell it out)  [min-name]
+  Data.Json.Decode: 42 decls, over 40  [max-decls]
+  Data.Json.Decode.Sum: jErr is 4 chars (hint: spell it out)  [min-name]
+  Data.Json.Encode: 42 decls, over 40  [max-decls]
+  Test.Data.Json.RecordSpec: spec is 4 chars (hint: spell it out)  [min-name]
+  Test.Data.Json.SumSpec: spec is 4 chars (hint: spell it out)  [min-name]
+  Test.Data.JsonSpec: spec is 4 chars (hint: spell it out)  [min-name]
+  Test.Main: main is 4 chars (hint: spell it out)  [min-name]
 
   max-decls
     Flags a module with more top-level declarations than allowed.
@@ -149,7 +155,7 @@ Linter: 2 rule(s)
     good: decodeRecord = ...
     bad:  dec = ...
 
-Linter: 4 violation(s)
+Linter: 7 violation(s)
 ```
 
 ## Contributing

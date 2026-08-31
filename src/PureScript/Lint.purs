@@ -146,7 +146,7 @@ lintModule { skipModules, flatRules } packageName workspaceModule = do
       violations = afterModules.violations <> afterDeclarations.violations <>
         afterExpressions.violations
       fixed = afterModules.fixed || afterDeclarations.fixed || afterExpressions.fixed
-    for_ violations \f -> log (fold [ "  ", workspaceModule.path, ": ", printFinding f ])
+    for_ violations \f -> log (fold [ "  ", context.moduleName, ": ", printFinding f ])
     when fixed (Workspace.writeModule workspaceModule.path afterExpressions.result)
     pure { surveyed, violations: Array.length violations, fired: map _.rule violations }
 
