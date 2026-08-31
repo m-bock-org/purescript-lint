@@ -214,10 +214,6 @@ it found.
 Linter: 2 rule(s)
   Data.Json.Decode: 42 decls, over 40  [max-decls]
   Data.Json.Decode.Sum: jErr is 4 chars (hint: spell it out)  [min-name]
-  Data.Json.Encode: 42 decls, over 40  [max-decls]
-  Test.Data.Json.RecordSpec: spec is 4 chars (hint: spell it out)  [min-name]
-  Test.Data.Json.SumSpec: spec is 4 chars (hint: spell it out)  [min-name]
-  Test.Data.JsonSpec: spec is 4 chars (hint: spell it out)  [min-name]
   Test.Main: main is 4 chars (hint: spell it out)  [min-name]
 
   max-decls
@@ -227,7 +223,7 @@ Linter: 2 rule(s)
     good: decodeRecord = ...
     bad:  dec = ...
 
-Linter: 7 violation(s)
+Linter: 3 violation(s)
 ```
 
 ## Working on it

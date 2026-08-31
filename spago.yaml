@@ -29,7 +29,7 @@ package:
     - transformers
     - tuples
   test:
-    main: Test.Lint.Main
+    main: Test.Main
     dependencies:
       - partial
       - patchdown

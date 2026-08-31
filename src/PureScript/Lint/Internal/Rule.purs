@@ -38,7 +38,7 @@ import Prelude
 
 import Data.Array (filter, find, foldl, head, init, last, tail) as Array
 import Data.Array.NonEmpty (NonEmptyArray)
-import Data.Array.NonEmpty (fromArray, singleton, toArray) as NEA
+import Data.Array.NonEmpty (fromArray, toArray) as NEA
 import Data.Foldable (minimum) as Foldable
 import Data.Maybe (Maybe(..))
 import Data.Maybe (fromMaybe, maybe) as Maybe

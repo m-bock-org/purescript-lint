@@ -2,4 +2,4 @@ output/
 .spago/
 node_modules/
 generated-docs/
-.spec-results/
+.spec-results

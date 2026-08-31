@@ -1,4 +1,4 @@
-module Test.Lint.WorkspaceSpec (spec) where
+module Test.PureScript.Lint.Internal.WorkspaceSpec (spec) where
 
 import Prelude
 

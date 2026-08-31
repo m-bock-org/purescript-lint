@@ -1,4 +1,4 @@
-module Test.Lint.RuleSetSpec (spec) where
+module Test.PureScript.Lint.Internal.RuleSetSpec (spec) where
 
 import Prelude
 
