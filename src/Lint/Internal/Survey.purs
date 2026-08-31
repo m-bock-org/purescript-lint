@@ -60,6 +60,7 @@ type SubjectExemption = { name :: String, appliesTo :: Subject -> Boolean }
 type PackageSurvey =
   { packageName :: String
   , packagePath :: FilePath
+  , dependencies :: Array String
   , modules :: Array SurveyModule
   }
 

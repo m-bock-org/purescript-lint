@@ -57,7 +57,13 @@ runLinterWith { skipModules } rules = do
     moduleCount = Array.length (Array.concatMap _.modules workspace.packages)
   scanned <- for workspace.packages \pkg -> do
     perModule <- for pkg.modules (lintModule configured pkg.name)
-    let survey = { packageName: pkg.name, packagePath: pkg.path, modules: map _.surveyed perModule }
+    let
+      survey =
+        { packageName: pkg.name
+        , packagePath: pkg.path
+        , dependencies: pkg.dependencies
+        , modules: map _.surveyed perModule
+        }
     pure
       { survey
       , violations: sum (map _.violations perModule)

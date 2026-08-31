@@ -6,12 +6,16 @@ module Lint.Internal.Spago
 
 import Prelude
 
+import Data.Array (mapMaybe) as Array
 import Data.Either (Either(..))
+import Data.Either (either, hush) as Either
 import Data.Json.Decode
   ( DecodeJson
+  , decodeArray
   , decodeAttempt
   , decodeObjectWithKey
   , decodeString
+  , JsonDecodeError
   , printJsonDecodeError
   , runDecodeFromString
   )
@@ -24,10 +28,12 @@ import Node.Buffer as Buffer
 import Node.ChildProcess (execSync)
 import Node.Encoding (Encoding(..))
 
--- | A package this repo owns, as spago reports it.
+-- | A package this repo owns, as spago reports it. `dependencies` is
+-- | what its own `spago.yaml` lists, not the transitive closure.
 type SpagoWorkspacePackage =
   { name :: String
   , path :: String
+  , dependencies :: Array String
   }
 
 -- | A package spago knows about. Only the workspace's own are ours to
@@ -52,10 +58,31 @@ decodeSpagoPkg :: String -> DecodeJson SpagoPkg
 decodeSpagoPkg name = ado
   tagged <- decodeAttempt (decodeRecord { type: decodeString })
   located <- decodeAttempt workspacePathOf
+  declared <- decodeAttempt workspaceDependenciesOf
   in
     case tagged, located of
-      Right { type: "workspace" }, Right { value: { path } } -> PkgWorkspace { name, path }
+      Right { type: "workspace" }, Right { value: { path } } ->
+        PkgWorkspace { name, path, dependencies: dependenciesOr declared }
       _, _ -> PkgOther
 
 workspacePathOf :: DecodeJson { value :: { path :: String } }
 workspacePathOf = decodeRecord { value: decodeRecord { path: decodeString } }
+
+-- | Only the names. A dependency spago.yaml can spell as a bare string
+-- | or as a map with a version range, and the range is nothing this
+-- | reads, so an entry that is not a plain string is dropped rather
+-- | than failing the whole package.
+workspaceDependenciesOf :: DecodeJson { value :: { package :: { dependencies :: Array String } } }
+workspaceDependenciesOf = decodeRecord
+  { value: decodeRecord { package: decodeRecord { dependencies: decodeNames } } }
+
+decodeNames :: DecodeJson (Array String)
+decodeNames = map keepNames (decodeArray (decodeAttempt decodeString))
+
+keepNames :: Array (Either JsonDecodeError String) -> Array String
+keepNames = Array.mapMaybe Either.hush
+
+dependenciesOr
+  :: Either JsonDecodeError { value :: { package :: { dependencies :: Array String } } }
+  -> Array String
+dependenciesOr = Either.either (const []) (_.value >>> _.package >>> _.dependencies)

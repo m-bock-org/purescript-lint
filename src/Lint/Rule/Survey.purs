@@ -2,9 +2,11 @@
 -- | syntax.
 -- |
 -- | A survey rule is handed a cheap structural map - module names,
--- | paths and kinds - rather than every module's CST, so a rule about
--- | how a package is laid out does not pay for parsing it. `perPackage`
--- | sees one package; `perWorkspace` sees them all.
+-- | paths and kinds, plus what each package's own `spago.yaml` depends
+-- | on - rather than every module's CST, so a rule about how a package
+-- | is laid out does not pay for parsing it. `perPackage` sees one
+-- | package; `perWorkspace` sees them all, which is what a rule about
+-- | the dependency graph between packages needs.
 -- |
 -- | A survey rule reports findings.
 module Lint.Rule.Survey (module Exports) where

@@ -28,16 +28,18 @@ import PureScript.CST.Errors (printParseError)
 import PureScript.CST.Parser.Monad (PositionedError)
 import PureScript.CST.Types (Module) as CST
 import Lint.Internal.Rule (ModuleKind(..))
-import Lint.Internal.Spago (SpagoPkg(..), spagoLsPackages)
+import Lint.Internal.Spago (SpagoPkg(..), SpagoWorkspacePackage, spagoLsPackages)
 
 -- | Every package this repo owns, as a structural map. Cheap to hold
 -- | whole; a module's CST is read separately when something needs it.
 type Workspace = { packages :: Array LocalPackage }
 
--- | One package: its spago name, its directory, and its modules.
+-- | One package: its spago name, its directory, what its own
+-- | `spago.yaml` depends on, and its modules.
 type LocalPackage =
   { name :: String
   , path :: FilePath
+  , dependencies :: Array String
   , modules :: Array WorkspaceModule
   }
 
@@ -77,10 +79,10 @@ getWorkspace =
       packages <- traverse toLocalPackage (Array.mapMaybe workspaceOnly pkgs)
       pure { packages }
 
-toLocalPackage :: { name :: String, path :: FilePath } -> Aff LocalPackage
-toLocalPackage { name, path } = do
+toLocalPackage :: SpagoWorkspacePackage -> Aff LocalPackage
+toLocalPackage { name, path, dependencies } = do
   modules <- modulesOf path
-  pure { name, path, modules }
+  pure { name, path, dependencies, modules }
 
 -- | Parse one module, failing loudly if it does not parse.
 readModule :: WorkspaceModule -> Aff (CST.Module Void)
