@@ -130,6 +130,28 @@ main = launchAff_ do
 
 Run it from a Spago project directory.
 
+## What it prints
+
+Each finding says what is wrong and which rule says so; each rule that
+fired then explains itself once, however many things it found.
+
+```
+Linter: 2 rule(s)
+  src/Data/Json/Decode.purs: 42 decls, over 40  [max-decls]
+  src/Data/Json/Decode/Sum.purs: jErr is 4 chars (hint: spell it out)  [min-name]
+  src/Data/Json/Encode.purs: 42 decls, over 40  [max-decls]
+  test/Test/Main.purs: main is 4 chars (hint: spell it out)  [min-name]
+
+  max-decls
+    Flags a module with more top-level declarations than allowed.
+  min-name
+    Flags a top-level name too short to say what it is.
+    good: decodeRecord = ...
+    bad:  dec = ...
+
+Linter: 4 violation(s)
+```
+
 ## Contributing
 
 Contributions are welcome! Please [open an issue](https://github.com/m-bock/purescript-lint/issues/new) to report bugs, suggest improvements, or propose new rules to be added.
