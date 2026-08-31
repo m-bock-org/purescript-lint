@@ -5,6 +5,8 @@
   </picture>
 </p>
 
+[![CI](https://github.com/m-bock/purescript-lint/actions/workflows/ci.yml/badge.svg)](https://github.com/m-bock/purescript-lint/actions/workflows/ci.yml)
+
 A lint engine for PureScript, written in PureScript. A rule set is a
 program you write, so using it means writing PureScript.
 
@@ -201,11 +203,10 @@ generatedCode =
 
 <!-- PD_END -->
 
-`exclude` and `runLinterWith { skipModules }` decide before a check runs
-- one value for one rule, or every rule for a whole module.
-`ignoreSubjects` decides after: a survey rule is handed the workspace in
-one go, so its findings can only be dropped once made, by what each one
-is about.
+`exclude` and `runLinterWith { skipModules }` decide before a check runs -
+one value for one rule, or every rule for a whole module. `ignoreSubjects`
+decides after: a survey rule is handed the workspace in one go, so its
+findings can only be dropped once made, by what each one is about.
 
 ## Running it
 
