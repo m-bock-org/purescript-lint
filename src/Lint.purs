@@ -6,7 +6,8 @@ import Control.Monad.State (State, modify_, runState)
 import Data.Array as Array
 import Data.Array.NonEmpty as NEA
 import Data.Foldable (fold, for_, sum)
-import Data.String.Common (joinWith) as String
+import Data.String.Common (joinWith, split) as String
+import Data.String.Pattern (Pattern(..))
 import Data.Maybe (Maybe(..))
 import Data.Maybe (isNothing) as Maybe
 import Data.Traversable (for)
@@ -119,15 +120,24 @@ printByRule located =
       log ("    " <> rule.description)
       for_ sharedHint \h -> log ("    hint: " <> h)
       for_ rule.examples \examples -> do
-        for_ examples.config \c -> log ("      with  " <> c)
-        for_ examples.good \e -> log ("      good  " <> e)
-        for_ examples.bad \e -> log ("      bad   " <> e)
+        for_ examples.config (labelled "with")
+        for_ examples.good (labelled "good")
+        for_ examples.bad (labelled "bad ")
       for_ (NEA.toArray group) \{ moduleName, finding } -> do
         log ""
         log ("  ◦ " <> moduleName)
         log ("      " <> finding.message)
         when (Maybe.isNothing sharedHint) do
           for_ finding.hint \h -> log ("      hint: " <> h)
+
+-- | One example under its label, with anything after the first line
+-- | indented to sit under it.
+labelled :: String -> String -> Aff Unit
+labelled label text =
+  for_ (Array.mapWithIndex indent (String.split (Pattern "\n") text)) log
+  where
+  indent 0 line = "      " <> label <> "  " <> line
+  indent _ line = "            " <> line
 
 -- | The one-line total, after everything else.
 printSummary :: Int -> Int -> Int -> Aff Unit
