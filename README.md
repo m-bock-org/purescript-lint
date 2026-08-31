@@ -24,6 +24,9 @@ a commit. `encode-decode` is a dependency that is not on the registry
 either, so it needs an entry of its own. Versions arrive with the
 registry release.
 
+<details>
+<summary>The <code>extraPackages</code> entries</summary>
+
 ```yaml
 workspace:
   extraPackages:
@@ -71,6 +74,8 @@ workspace:
         - tuples
         - typelevel-prelude
 ```
+
+</details>
 
 Then add `lint-purs` to your package's `dependencies`.
 
