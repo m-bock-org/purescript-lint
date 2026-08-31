@@ -8,7 +8,7 @@ import Partial.Unsafe (unsafeCrashWith)
 import PureScript.CST (RecoveredParserResult(..), parseModule)
 import PureScript.CST.Types (Declaration, Module(..), ModuleBody(..)) as CST
 import PureScript.Lint.Internal.Rule (DeclarationRule, LintContext, ModuleKind(..), perDecl, runRules)
-import Test.PureScript.Lint.ReadmeExample (arityRule, arityRuleExceptGenerated, maxFunctionArity)
+import Test.PureScript.Lint.ReadmeExample (arityRule, arityUnlessGenerated, maxFunctionArity)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
@@ -56,9 +56,9 @@ spec = describe "the rule the README shows" do
   it "fires in an ordinary module, exemption or not" do
     let src = "module S where\n\nresize a b c d e = e\n"
     inModule "MyApp.Image" arityRule src `shouldEqual` [ "resize takes 5 args" ]
-    inModule "MyApp.Image" arityRuleExceptGenerated src `shouldEqual` [ "resize takes 5 args" ]
+    inModule "MyApp.Image" arityUnlessGenerated src `shouldEqual` [ "resize takes 5 args" ]
 
   it "is suppressed by the exemption in a generated module" do
     let src = "module S where\n\nresize a b c d e = e\n"
     inModule "MyApp.Generated.Image" arityRule src `shouldEqual` [ "resize takes 5 args" ]
-    inModule "MyApp.Generated.Image" arityRuleExceptGenerated src `shouldEqual` []
+    inModule "MyApp.Generated.Image" arityUnlessGenerated src `shouldEqual` []
