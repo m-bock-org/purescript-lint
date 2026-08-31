@@ -112,17 +112,17 @@ printByRule located =
         hints = Array.nub (Array.catMaybes (map _.finding.hint (NEA.toArray group)))
         sharedHint = if Array.length hints == 1 then Array.head hints else Nothing
       log ""
-      log (String.joinWith " / " (Array.snoc (NEA.head group).finding.groups rule.name))
-      log ("  " <> rule.description)
-      for_ sharedHint \h -> log ("  hint: " <> h)
-      for_ rule.goodExample \e -> log ("    good  " <> e)
-      for_ rule.badExample \e -> log ("    bad   " <> e)
+      log ("● " <> String.joinWith " / " (Array.snoc (NEA.head group).finding.groups rule.name))
+      log ("    " <> rule.description)
+      for_ sharedHint \h -> log ("    hint: " <> h)
+      for_ rule.goodExample \e -> log ("      good  " <> e)
+      for_ rule.badExample \e -> log ("      bad   " <> e)
       for_ (NEA.toArray group) \{ moduleName, finding } -> do
         log ""
-        log ("  " <> moduleName)
-        log ("    " <> finding.message)
+        log ("  • " <> moduleName)
+        log ("      " <> finding.message)
         when (Maybe.isNothing sharedHint) do
-          for_ finding.hint \h -> log ("    hint: " <> h)
+          for_ finding.hint \h -> log ("      hint: " <> h)
 
 -- | The one-line total, after everything else.
 printSummary :: Int -> Int -> Int -> Aff Unit
