@@ -1,26 +1,28 @@
 {
-  // Everything here points at .vscode/<tool>, which runs the tool inside
-  // this repo's dev shell. Without it the extension picks up a globally
-  // installed purs or one from node_modules, which is a different
-  // compiler from the one the build uses.
-  "purescript.pursExe": ".vscode/purs",
-  "purescript.buildCommand": ".vscode/spago build --purs-args --json-errors",
-  "purescript.formatter": "purs-tidy",
-  "purescript.pursTidyExe": ".vscode/purs-tidy",
-
-  // The one thing the wrappers cannot cover: this setting makes the
-  // extension shell out to a bare `spago` on PATH for the source globs,
-  // and there is no spagoExe setting to point at .vscode/spago, nor a
-  // sourceGlobs setting to bypass it. So direnv - or an editor started
-  // from `nix develop` - is what keeps it working.
+  // The extension resolves executables through PATH, so the toolchain has
+  // to BE on PATH: direnv (`direnv allow` once per checkout), or an
+  // editor started from `nix develop`. Without that, the IDE server never
+  // starts - "Couldn't find IDE server, looked for: purs" - and
+  // formatting fails with "not found: purs-tidy".
   //
-  // Definitions also need externs from a build that succeeded, so a
-  // broken buildCommand looks identical to missing globs from here.
-  // Check the PureScript output channel before believing either.
+  // .vscode/purs cannot help here. pursExe is documented as "resolved wrt
+  // PATH", so a relative path is looked up as a command name and is not
+  // found. And there is no pursTidyExe setting at all; the formatter is
+  // named, not located.
+  "purescript.formatter": "purs-tidy",
+
+  // buildCommand is the exception, and the only place a wrapper works: it
+  // is a command line rather than an executable lookup, so the relative
+  // path resolves against the workspace root. The wrapper puts the pinned
+  // toolchain on PATH for what it spawns, so spago finds the right purs.
+  "purescript.buildCommand": ".vscode/spago build --purs-args --json-errors",
+
+  // Whether to add spago sources to the globs passed to the IDE server.
+  // Shells out to a bare `spago`, so this needs PATH too.
   "purescript.addSpagoSources": true,
 
   // The npm bin directory holds a second purs and a second spago whose
-  // versions are pinned in package.json, not in the flake. Keeping it
-  // off the extension's PATH is the point of the wrappers above.
+  // versions are pinned in package.json, not in the flake. Keeping it off
+  // the extension's PATH is why the dev shell has to supply them instead.
   "purescript.addNpmPath": false
 }
