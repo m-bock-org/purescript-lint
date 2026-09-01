@@ -8,9 +8,19 @@
   "purescript.formatter": "purs-tidy",
   "purescript.pursTidyExe": ".vscode/purs-tidy",
 
+  // The one thing the wrappers cannot cover: this setting makes the
+  // extension shell out to a bare `spago` on PATH for the source globs,
+  // and there is no spagoExe setting to point at .vscode/spago, nor a
+  // sourceGlobs setting to bypass it. So direnv - or an editor started
+  // from `nix develop` - is what keeps it working.
+  //
+  // Definitions also need externs from a build that succeeded, so a
+  // broken buildCommand looks identical to missing globs from here.
+  // Check the PureScript output channel before believing either.
+  "purescript.addSpagoSources": true,
+
   // The npm bin directory holds a second purs and a second spago whose
   // versions are pinned in package.json, not in the flake. Keeping it
   // off the extension's PATH is the point of the wrappers above.
-  "purescript.addNpmPath": false,
-  "purescript.addSpagoSources": true
+  "purescript.addNpmPath": false
 }

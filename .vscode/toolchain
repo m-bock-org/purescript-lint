@@ -2,14 +2,15 @@
 # Runs one tool from this repo's flake, so the editor never reaches for a
 # globally installed compiler or the one under node_modules.
 #
-# purs, spago and purs-tidy are symlinks to this file; which one you get
-# is the name it was called by. Nothing has to be set up first: if
-# .vscode/.toolchain is missing, or older than the flake, this builds it
-# and carries on. After that every call is a plain exec, about 20ms - a
-# nix invocation costs ~1.5s even with its evaluation cache warm, which
-# is why the symlink exists at all.
+# Every tool is a symlink to this file; which one you get is the name it
+# was called by, so nothing here knows what language it serves. Nothing
+# has to be set up first: if .vscode/.toolchain is missing, or older than
+# the flake, this builds it and carries on. After that every call is a
+# plain exec, about 20ms - a nix invocation costs ~1.5s even with its
+# evaluation cache warm, which is why the symlink exists at all.
 #
-# This file is identical in every repo. Copy it, don't adapt it.
+# The canonical copy lives in environmentalist. Do not edit it here -
+# run `nix run <environmentalist>#sync -- <tool>...` to refresh it.
 set -euo pipefail
 
 tool="$(basename "$0")"
@@ -38,5 +39,12 @@ fi
   echo "$tool: could not build $root#toolchain, and nix was not found on PATH" >&2
   exit 127
 }
+
+# The tool's own PATH, not just the tool. spago shells out to purs, and
+# an editor runs this with whatever PATH the login shell had - so
+# execing the pinned spago alone gets "Failed to find purs", from a
+# wrapper whose entire job was to make that impossible. Prepending keeps
+# the pinned toolchain first for anything this launches.
+export PATH="$pin/bin:$PATH"
 
 exec "$pin/bin/$tool" "$@"
