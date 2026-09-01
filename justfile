@@ -5,7 +5,15 @@
 # agreed at 0.15.16 by luck; ^0.15.15 drifts on the next npm install.
 set shell := ["bash", "-c"]
 
+# Restores output/ first if there is none - a fresh clone then compiles
+# nothing, because al-dente already built every dependency. Only when it
+# is missing: once you have edited anything, the store copy is behind
+# your working tree and replacing output/ would throw away exactly the
+# incremental state that makes a rebuild fast.
 build:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    [ -d output ] || just output
     spago build
 
 # The gate's build: warnings are errors. purs does not re-report a
@@ -47,7 +55,7 @@ check: strict test docs-check
 output:
     #!/usr/bin/env bash
     set -euo pipefail
-    built="$(nix build .#default --no-link --print-out-paths)"
+    built="$(nix build .#testOutput --no-link --print-out-paths)"
     rm -rf output
     cp -aL "$built" output
     chmod -R u+w output
