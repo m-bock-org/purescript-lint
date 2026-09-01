@@ -16,10 +16,7 @@
         # A wrong hash makes nix report the right one.
         # What the editor runs, so it never reaches for a globally
         # installed compiler or the one under node_modules.
-        toolchain = pkgs.symlinkJoin {
-          name = "toolchain";
-          paths = [ lib.defaults.purs lib.defaults.spago lib.defaults.purs-tidy ];
-        };
+        toolchain = lib.toolchain;
 
         workspace = lib.mkWorkspace {
           src = ./.;
