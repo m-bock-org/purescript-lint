@@ -1,0 +1,89 @@
+{
+  "exempt": [
+    {
+      "rule": "max-module-name-segments",
+      "modules": ["Lint.Rule.Survey", "Lint.RuleSet.Do"],
+      "why": "BY DESIGN. Both are public and deliberately two segments deep: Lint.Rule.Survey is the survey half of Lint.Rule and belongs beside it, and Lint.RuleSet.Do is the do-notation for Lint.RuleSet. Moving either under .Internal would hide something callers are meant to import."
+    },
+    {
+      "rule": "encode-decode-signature",
+      "modules": ["Lint.Internal.Exemptions", "Lint.Internal.Spago"],
+      "why": "BY DESIGN. Decoders named for what they decode - decodeSpagoPkg, decodeExempt - which already have the DecodeJson shape the rule wants. The rule is matching on the name."
+    },
+    {
+      "rule": "no-duplicate-record-shape",
+      "modules": ["Lint.Internal.Exemptions", "Test.Lint.ExemptionsSpec"],
+      "why": "BY DESIGN. The exemption subject record is spelled out in the matcher and again in its specs. Naming it would put a type in the public interface that exists only to be matched against."
+    },
+    {
+      "rule": "combinator-atoms",
+      "modules": ["Lint.Internal.Exemptions", "Lint.Internal.Rule", "Lint.Internal.Spago"],
+      "why": "UNREVIEWED RULE. Added 2026-09-02 and registered Unreviewed. Whether it earns its place is undecided, and holding this repository to it before that decision is backwards."
+    },
+    {
+      "rule": "combinator-one-line",
+      "modules": ["Lint.Internal.Exemptions", "Lint.Internal.Rule"],
+      "why": "UNREVIEWED. The weaker half of combinator-atoms; the same decision is pending."
+    },
+    {
+      "rule": "case-arm-layout",
+      "modules": ["Lint.Internal.Exemptions", "Lint.Internal.RuleSet", "Lint.Internal.Spago"],
+      "why": "UNREVIEWED RULE. Added 2026-09-02. The findings are real - the arms genuinely disagree - but the rule has not been reviewed and this repository should not be the first thing held to it."
+    },
+    {
+      "rule": "comment-policy",
+      "modules": ["Lint.Internal.Exemptions", "Test.Lint.ExemptionsSpec"],
+      "why": "BACKLOG. Trailing Context blocks, which the public set forbids because that convention is this workspace's and a stranger never agreed to it. The prose belongs in doc comments on the declarations it describes."
+    },
+    {
+      "rule": "single-line-signature",
+      "modules": ["Lint", "Lint.Internal.Exemptions", "Lint.Internal.Rule", "Lint.Internal.Spago", "Lint.Internal.Survey"],
+      "why": "BACKLOG. Signatures with several constrained type variables that do not fit on one line. The fix is usually a named type alias."
+    },
+    {
+      "rule": "max-delimiter-run",
+      "modules": ["Lint", "Lint.Internal.Exemptions", "Test.Lint.Internal.RuleSetSpec", "Test.Lint.ReadmeExampleSpec"],
+      "why": "BACKLOG. Nested brackets past the limit, mostly record literals and test fixtures."
+    },
+    {
+      "rule": "max-line-length",
+      "modules": ["Lint.Internal.Exemptions", "Test.Lint.Internal.RuleSpec", "Test.Lint.ReadmeExampleSpec"],
+      "why": "BACKLOG."
+    },
+    {
+      "rule": "same-constructor-arm",
+      "modules": ["Lint.Internal.Exemptions"],
+      "why": "BACKLOG."
+    },
+    {
+      "rule": "no-same-kind-block-nesting",
+      "modules": ["Lint.Internal.Exemptions"],
+      "why": "BACKLOG. A case inside a case in the module matcher."
+    },
+    {
+      "rule": "no-bare-either-hush",
+      "modules": ["Lint.Internal.Spago"],
+      "why": "BACKLOG. One bare hush dropping a decode error from spago ls packages. It wants hushBecause and a written reason - a one-line fix nobody has made."
+    },
+    {
+      "rule": "no-where-clauses",
+      "modules": ["Lint", "Lint.Internal.Rule"],
+      "why": "BACKLOG. Two where clauses predating the rule."
+    },
+    {
+      "rule": "hoistable-local",
+      "modules": ["Lint", "Lint.Internal.Rule"],
+      "why": "BACKLOG."
+    },
+    {
+      "rule": "max-function-arity",
+      "modules": ["Lint", "Lint.Internal.Rule"],
+      "why": "BACKLOG. Two functions past the limit; both want their arguments grouped into a record."
+    },
+    {
+      "rule": "max-call-stack-depth",
+      "modules": ["Lint"],
+      "why": "BACKLOG. The fix loop threads options, rules and exemptions through four frames. Worth restructuring."
+    }
+  ]
+}
