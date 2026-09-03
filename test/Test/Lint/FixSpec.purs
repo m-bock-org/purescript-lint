@@ -14,6 +14,7 @@ import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Effect.Ref as Ref
 import Lint (runLinterWith)
+import Lint.Internal.Exemptions as Exemptions
 import Lint.Fix (guidanceFor, outcomeLine)
 import Lint.Fix as Fix
 import Lint.Rule (perDecl)
@@ -56,6 +57,7 @@ spec = do
       seen <- liftEffect (Ref.new Nothing)
       _ <- runLinterWith
         { skipModules: []
+        , standing: Exemptions.All
         , fix: Just
             { propose: \brief -> do
                 liftEffect (Ref.write (Just { path: brief.path, source: brief.source }) seen)
@@ -78,6 +80,7 @@ spec = do
       asked <- liftEffect (Ref.new 0)
       _ <- runLinterWith
         { skipModules: []
+        , standing: Exemptions.All
         , fix: Just
             { propose: \_ -> do
                 liftEffect (Ref.modify_ (_ + 1) asked)
@@ -101,6 +104,7 @@ spec = do
       proposed <- liftEffect (Ref.new Nothing)
       _ <- runLinterWith
         { skipModules: []
+        , standing: Exemptions.All
         , fix: Just
             { propose: \brief -> do
                 let emptied = "module " <> brief.moduleName <> " where\n"
@@ -132,6 +136,7 @@ spec = do
       before <- FS.readTextFile UTF8 thisFile
       _ <- runLinterWith
         { skipModules: []
+        , standing: Exemptions.All
         , fix: Just
             { propose: \_ -> pure (Left "not today")
             , guidance: table

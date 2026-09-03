@@ -56,7 +56,7 @@ import Lint.Internal.Workspace as Workspace
 -- |
 -- | A rule that rewrites is applied: the module is written back.
 runLinter :: Array Rule -> Aff Boolean
-runLinter = runLinterWith { skipModules: [], fix: Nothing }
+runLinter = runLinterWith { skipModules: [], fix: Nothing, standing: Exemptions.All }
 
 -- | `runLinter` with options. Uses `lintWorkspace`.
 runLinterWith :: LintOptions -> Array Rule -> Aff Boolean
@@ -82,8 +82,8 @@ runLinterWith options rules = do
 -- | never appear in `located`. That is why it is reported rather than
 -- | derived from the array's length.
 lintWorkspace :: LintOptions -> Array Rule -> Aff LintReport
-lintWorkspace { skipModules } rules = do
-  exemptions <- readOrFail
+lintWorkspace { skipModules, standing } rules = do
+  exemptions <- readOrFail standing
   workspace <- Workspace.getWorkspace
   let
     flatRules = flattenRules rules
@@ -116,9 +116,9 @@ lintWorkspace { skipModules } rules = do
 -- | Absent is fine and means no exemptions. Present but malformed is
 -- | not: a mistyped file that quietly exempted nothing would be found
 -- | by a rule firing somewhere nobody expected, months later.
-readOrFail :: Aff Exemptions
-readOrFail = do
-  found <- Exemptions.readExemptions
+readOrFail :: Exemptions.Standing -> Aff Exemptions
+readOrFail standing = do
+  found <- Exemptions.readExemptionsWith standing
   case found of
     Left why -> Aff.throwError (Aff.error why)
     Right exemptions -> pure exemptions
@@ -299,6 +299,10 @@ reportSurvey { flatRules, exemptions } surveys = do
 type LintOptions =
   { skipModules :: Array ModuleExemption
   , fix :: Maybe FixConfig
+  -- | Which exemptions this run honours. `All` for a person's run;
+  -- | `ByDesignOnly` for a fixer, which is the one caller that should
+  -- | see the pending backlog rather than have it suppressed.
+  , standing :: Exemptions.Standing
   }
 
 -- | Everything one run saw.
