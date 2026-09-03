@@ -1,4 +1,4 @@
-module Lint (LintOptions, runLinter, runLinterWith) where
+module Lint (LintOptions, LintReport, Located, lintWorkspace, runLinter, runLinterWith) where
 
 import Prelude
 
@@ -47,9 +47,28 @@ import Lint.Internal.Workspace as Workspace
 runLinter :: Array Rule -> Aff Boolean
 runLinter = runLinterWith { skipModules: [] }
 
--- | `runLinter` with options.
+-- | `runLinter` with options. Uses `lintWorkspace`.
 runLinterWith :: LintOptions -> Array Rule -> Aff Boolean
-runLinterWith { skipModules } rules = do
+runLinterWith options rules = do
+  report <- lintWorkspace options rules
+  printByRule report.located
+  printSummary report.total (Array.length (Array.nub (map _.moduleName report.located)))
+    report.moduleCount
+  pure (report.total == 0)
+
+-- | What a run found, without printing any of it.
+-- |
+-- | The same walk `runLinterWith` does, handing back what it saw
+-- | instead of a verdict. For anything that has to *act* on findings
+-- | rather than show them - which otherwise means reading this
+-- | module's own printed output back in, and a tool that parses its own
+-- | prose has put the feature in the wrong place.
+-- |
+-- | `total` counts survey findings too, which have no module and so
+-- | never appear in `located`. That is why it is reported rather than
+-- | derived from the array's length.
+lintWorkspace :: LintOptions -> Array Rule -> Aff LintReport
+lintWorkspace { skipModules } rules = do
   workspace <- Workspace.getWorkspace
   let
     flatRules = flattenRules rules
@@ -71,11 +90,11 @@ runLinterWith { skipModules } rules = do
       }
   surveyed <- reportSurvey configured (map _.survey scanned)
   let total = sum (map _.violations scanned) + surveyed
-  printByRule (Array.concatMap _.located scanned)
-  printSummary total
-    (Array.length (Array.nub (map _.moduleName (Array.concatMap _.located scanned))))
-    moduleCount
-  pure (total == 0)
+  pure
+    { located: Array.concatMap _.located scanned
+    , total
+    , moduleCount
+    }
 
 reportSurvey :: Configured -> Array PackageSurvey -> Aff Int
 reportSurvey { flatRules } surveys = do
@@ -90,6 +109,13 @@ reportSurvey { flatRules } surveys = do
 
 -- | `skipModules` names modules no rule should see at all.
 type LintOptions = { skipModules :: Array ModuleExemption }
+
+-- | Everything one run saw.
+type LintReport =
+  { located :: Array Located
+  , total :: Int
+  , moduleCount :: Int
+  }
 
 type Configured =
   { skipModules :: Array ModuleExemption
