@@ -18,6 +18,7 @@ import Effect.Class.Console (log)
 import PureScript.CST.Traversal (defaultVisitorM, rewriteDeclBottomUpM)
 import PureScript.CST.Types
   ( Declaration(..)
+  , ImportDecl(..)
   , Expr
   , Ident(..)
   , Labeled(..)
@@ -389,7 +390,11 @@ lintModule { skipModules, flatRules, exemptions } packageName workspaceModule = 
       , kind: workspaceModule.kind
       }
     surveyed =
-      { moduleName: context.moduleName, path: context.path, kind: context.kind }
+      { moduleName: context.moduleName
+      , path: context.path
+      , kind: context.kind
+      , imports: importsOf original
+      }
   if Array.any (\g -> g.appliesTo context) skipModules then
     pure { surveyed, violations: 0, located: [] }
   else do
@@ -425,6 +430,19 @@ moduleNameOf :: CST.Module Void -> String
 moduleNameOf (CST.Module { header: CST.ModuleHeader { name } }) =
   case name of
     CST.Name { name: CST.ModuleName n } -> n
+
+-- | Every module this one imports, by name.
+-- |
+-- | On the survey rather than only in the parse tree, because the
+-- | questions worth asking about imports are about the *graph* - how
+-- | deep the chain under a module goes - and a rule handed one module at
+-- | a time can count its imports but never follow one.
+importsOf :: CST.Module Void -> Array String
+importsOf (CST.Module { header: CST.ModuleHeader { imports } }) =
+  map
+    ( \(CST.ImportDecl { module: CST.Name { name: CST.ModuleName n } }) -> n
+    )
+    imports
 
 rewriteDecls :: LintContext -> CST.Module Void -> PerDeclaration -> RuleOutcome (CST.Module Void)
 rewriteDecls context (CST.Module moduleFields) perDeclaration =

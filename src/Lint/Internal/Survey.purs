@@ -33,7 +33,12 @@ import Lint.Internal.Exemptions as Exemptions
 import Lint.Internal.Rule (class RuleOptions, Examples, Grouped, ModuleKind)
 
 -- | One module, as a survey sees it: where it is, not what is in it.
-type SurveyModule = { moduleName :: String, path :: FilePath, kind :: ModuleKind }
+type SurveyModule =
+  { moduleName :: String
+  , path :: FilePath
+  , kind :: ModuleKind
+  , imports :: Array String
+  }
 
 -- | What a survey rule is complaining about.
 data Subject
