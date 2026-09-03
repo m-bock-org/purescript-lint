@@ -1,11 +1,13 @@
 module Lint.Internal.Exemptions
   ( Exempt
   , Exemptions
+  , Standing(..)
   , decodeExemptions
   , exemptFile
   , matches
   , noExemptions
   , readExemptions
+  , readExemptionsWith
   ) where
 
 import Prelude
@@ -53,6 +55,22 @@ type Exempt =
 
 type Exemptions = Array Exempt
 
+-- | Which exemptions a run honours.
+-- |
+-- | `All` is every run a person does: both lists suppress, so the
+-- | build is about the code someone is writing rather than about a
+-- | backlog they did not create.
+-- |
+-- | `ByDesignOnly` is the fixer's view. `pending` stops suppressing,
+-- | so the backlog reappears as findings and something can be done
+-- | about it - while `exempt` still holds, because those are decisions
+-- | rather than debt and a robot must not undo them.
+data Standing
+  = All
+  | ByDesignOnly
+
+derive instance Eq Standing
+
 -- | Where the file lives, relative to the repository being linted.
 -- |
 -- | Named for exactly what it holds, and not `lint.json`, because the
@@ -76,27 +94,40 @@ noExemptions = []
 -- | found by a rule firing somewhere nobody expected, months later.
 -- | Uses `decodeExemptions`.
 readExemptions :: Aff (Either String Exemptions)
-readExemptions = do
+readExemptions = readExemptionsWith All
+
+-- | Read them, honouring only the standing asked for.
+-- | Uses `decodeExemptionsWith`.
+readExemptionsWith :: Standing -> Aff (Either String Exemptions)
+readExemptionsWith standing = do
   attempted <- Aff.attempt (FS.readTextFile UTF8 exemptFile)
   case attempted of
     Left _ -> pure (Right noExemptions)
-    Right text -> pure (decodeExemptions text)
+    Right text -> pure (decodeExemptionsWith standing text)
 
--- | The file's contents, decoded.
+-- | The file's contents, decoded. Uses `decodeExemptionsWith`.
 decodeExemptions :: String -> Either String Exemptions
-decodeExemptions text = case jsonParser text of
+decodeExemptions = decodeExemptionsWith All
+
+-- | The file's contents, decoded, honouring one standing.
+decodeExemptionsWith :: Standing -> String -> Either String Exemptions
+decodeExemptionsWith standing text = case jsonParser text of
   Left err -> Left (exemptFile <> ": " <> err)
   Right json -> case runDecode decodeTop json of
     Left err -> Left (exemptFile <> ": " <> printJsonDecodeError err)
-    Right top -> Right top.exempt
+    Right top -> Right case standing of
+      All -> top.exempt <> top.pending
+      ByDesignOnly -> top.exempt
 
 -- |
 -- | without naming both, and `rule` defaults to `"*"` because the
 -- | common case is a module nothing should look at.
 -- | Private.
-decodeTop :: DecodeJson { exempt :: Exemptions }
-decodeTop = decodeRecordWithDefaults { exempt: [] }
-  { exempt: decodeArray decodeExempt }
+decodeTop :: DecodeJson { exempt :: Exemptions, pending :: Exemptions }
+decodeTop = decodeRecordWithDefaults { exempt: [], pending: [] }
+  { exempt: decodeArray decodeExempt
+  , pending: decodeArray decodeExempt
+  }
 
 -- | Private.
 decodeExempt :: DecodeJson Exempt
