@@ -4,6 +4,7 @@ import Prelude
 
 import Effect (Effect)
 import Test.Lint.FixSpec as FixSpec
+import Test.Lint.Internal.DedentSpec as DedentSpec
 import Test.Lint.Internal.RuleSetSpec as RuleSetSpec
 import Test.Lint.Internal.RuleSpec as RuleSpec
 import Test.Lint.Internal.WorkspaceSpec as WorkspaceSpec
@@ -15,6 +16,7 @@ main :: Effect Unit
 main =
   runSpecAndExitProcess [ consoleReporter ] do
     RuleSpec.spec
+    DedentSpec.spec
     RuleSetSpec.spec
     WorkspaceSpec.spec
     ReadmeExampleSpec.spec
