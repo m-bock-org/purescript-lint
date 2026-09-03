@@ -87,6 +87,27 @@ type FixConfig =
   -- | adds the declaration, the second gives it the note the style
   -- | wants.
   , rounds :: Int
+  -- | A second, stronger acceptance test, run only once the re-lint is
+  -- | already clean.
+  -- |
+  -- | Re-linting answers "is the finding gone, and did nothing else
+  -- | start" - and a proposal can pass that while not compiling at
+  -- | all. Rewriting `maybe' (\_ -> throw e) pure` as a case over
+  -- | `Nothing`/`Just` is the example that forced this: every rule is
+  -- | satisfied, and the module imported `Maybe` without its
+  -- | constructors, so the result did not build. No rule notices,
+  -- | because no rule is about that.
+  -- |
+  -- | What goes here is a typecheck. It is left to the caller rather
+  -- | than done here because this module deliberately knows nothing
+  -- | about how the code it lints is built, and a linter that shells
+  -- | out to one build tool by name has picked one.
+  -- |
+  -- | Its `Left` is fed back as `broke`, so a failure is a round of
+  -- | the retry loop rather than the end of the attempt: the proposer
+  -- | is told what did not compile and gets to finish the job. Absent,
+  -- | the re-lint is the only judge.
+  , verify :: Maybe (Aff (Either String Unit))
   }
 
 -- | What came of one finding.
