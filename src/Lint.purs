@@ -114,12 +114,12 @@ readOrFail = do
     Right exemptions -> pure exemptions
 
 reportSurvey :: Configured -> Array PackageSurvey -> Aff Int
-reportSurvey { flatRules } surveys = do
+reportSurvey { flatRules, exemptions } surveys = do
   let
     forPackage s = map (append (s.packageName <> ": "))
-      (runSurveyRules flatRules.packages s)
+      (runSurveyRules exemptions flatRules.packages s)
     perPackage = Array.concatMap forPackage surveys
-    perWorkspace = runSurveyRules flatRules.workspaces { packages: surveys }
+    perWorkspace = runSurveyRules exemptions flatRules.workspaces { packages: surveys }
     findings = perPackage <> perWorkspace
   for_ findings \msg -> log ("  " <> msg)
   pure (Array.length findings)

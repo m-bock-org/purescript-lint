@@ -20,13 +20,16 @@ module Lint.Internal.Survey
   , surveyCheck
   , surveyDisabled
   , surveyExclude
+  , surveyName
   ) where
 
 import Prelude
 
 import Data.Array (any, concatMap, filter) as Array
-import Data.Maybe (Maybe)
 import Node.Path (FilePath)
+import Data.Maybe (Maybe(..))
+import Lint.Internal.Exemptions (Exemptions)
+import Lint.Internal.Exemptions as Exemptions
 import Lint.Internal.Rule (class RuleOptions, Examples, Grouped, ModuleKind)
 
 -- | One module, as a survey sees it: where it is, not what is in it.
@@ -85,7 +88,8 @@ type WorkspaceLint cfg =
 
 -- | A package rule with its options applied.
 newtype PackageRule = PackageRule
-  { exclude :: Array SubjectExemption
+  { name :: String
+  , exclude :: Array SubjectExemption
   , disabled :: Boolean
   , check :: PackageSurvey -> Array SurveyFinding
   }
@@ -93,7 +97,7 @@ newtype PackageRule = PackageRule
 -- | Run this rule once per package.
 perPackage :: ∀ cfg. PackageLint cfg -> cfg -> PackageRule
 perPackage lint config =
-  PackageRule { exclude: [], disabled: false, check: lint.rule config }
+  PackageRule { name: lint.name, exclude: [], disabled: false, check: lint.rule config }
 
 -- | Run a rule that has nothing to configure once per package.
 perPackage_ :: PackageLint Unit -> PackageRule
@@ -107,7 +111,8 @@ instance HasSubjectIgnore PackageRule where
 
 -- | A workspace rule with its options applied.
 newtype WorkspaceRule = WorkspaceRule
-  { exclude :: Array SubjectExemption
+  { name :: String
+  , exclude :: Array SubjectExemption
   , disabled :: Boolean
   , check :: WorkspaceSurvey -> Array SurveyFinding
   }
@@ -115,7 +120,7 @@ newtype WorkspaceRule = WorkspaceRule
 -- | Run this rule once over the whole workspace.
 perWorkspace :: ∀ cfg. WorkspaceLint cfg -> cfg -> WorkspaceRule
 perWorkspace lint config =
-  WorkspaceRule { exclude: [], disabled: false, check: lint.rule config }
+  WorkspaceRule { name: lint.name, exclude: [], disabled: false, check: lint.rule config }
 
 -- | Run a rule that has nothing to configure over the whole workspace.
 perWorkspace_ :: WorkspaceLint Unit -> WorkspaceRule
@@ -141,27 +146,61 @@ class SurveyLike r s | r -> s where
   surveyExclude :: r -> Array SubjectExemption
   -- | The check itself.
   surveyCheck :: r -> s -> Array SurveyFinding
+  -- | What the rule is called.
+  -- |
+  -- | Kept because a finding has to be exemptable by rule name, and a
+  -- | survey rule used to drop its name on the way in - which is also
+  -- | why survey findings print as bare lines rather than grouped under
+  -- | the rule that made them.
+  surveyName :: r -> String
 
 instance SurveyLike PackageRule PackageSurvey where
   surveyDisabled (PackageRule r) = r.disabled
   surveyExclude (PackageRule r) = r.exclude
   surveyCheck (PackageRule r) = r.check
+  surveyName (PackageRule r) = r.name
 
 instance SurveyLike WorkspaceRule WorkspaceSurvey where
   surveyDisabled (WorkspaceRule r) = r.disabled
   surveyExclude (WorkspaceRule r) = r.exclude
   surveyCheck (WorkspaceRule r) = r.check
+  surveyName (WorkspaceRule r) = r.name
 
 -- | Run every survey rule and collect what they found.
 runSurveyRules
-  :: ∀ r s. SurveyLike r s => Array (Grouped r) -> s -> Array String
-runSurveyRules rules survey =
+  :: ∀ r s. SurveyLike r s => Exemptions -> Array (Grouped r) -> s -> Array String
+runSurveyRules exemptions rules survey =
   let
     applyOne { rule: r }
       | surveyDisabled r = []
-      | otherwise = map _.message (Array.filter (kept r) (surveyCheck r survey))
+      | otherwise = map _.message
+          (Array.filter (\f -> kept r f && notExempt exemptions r f) (surveyCheck r survey))
   in
     Array.concatMap applyOne rules
 
 kept :: ∀ r s. SurveyLike r s => r -> SurveyFinding -> Boolean
 kept r finding = not (Array.any (\ex -> ex.appliesTo finding.subject) (surveyExclude r))
+
+-- | Private. Used only by `runSurveyRules`. Uses `subjectName`.
+-- |
+-- | A survey rule sees the whole workspace, so its findings are about a
+-- | module, package or namespace rather than about a place in a file -
+-- | which is why they are filtered after the rule has looked rather
+-- | than skipped before it. The file matches on the subject's name, so
+-- | a module named there is exempt whichever kind of rule found it.
+notExempt :: ∀ r s. SurveyLike r s => Exemptions -> r -> SurveyFinding -> Boolean
+notExempt exemptions r finding = not
+  ( Exemptions.matches exemptions
+      { rule: surveyName r
+      , moduleName: subjectName finding.subject
+      , path: ""
+      , declarationName: Nothing
+      }
+  )
+
+-- | Private. Used only by `notExempt`.
+subjectName :: Subject -> String
+subjectName = case _ of
+  Namespace name -> name
+  Package name -> name
+  Module name -> name
