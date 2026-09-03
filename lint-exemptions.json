@@ -1,7 +1,7 @@
 {
   "exempt": [
     {
-      "rule": "max-module-name-segments",
+      "rule": "facade-layout",
       "modules": ["Lint.Rule.Survey", "Lint.RuleSet.Do"],
       "why": "BY DESIGN. Both are public and deliberately two segments deep: Lint.Rule.Survey is the survey half of Lint.Rule and belongs beside it, and Lint.RuleSet.Do is the do-notation for Lint.RuleSet. Moving either under .Internal would hide something callers are meant to import."
     },
