@@ -49,6 +49,7 @@ type WorkspaceModule =
   , kind :: ModuleKind
   }
 
+-- | Private, depth 2. Used only by `toLocalPackage`. Uses `modulesOfKind`, `moduleGlob`.
 modulesOf :: FilePath -> Aff (Array WorkspaceModule)
 modulesOf packagePath = do
   sourceModules <- modulesOfKind SourceModule (moduleGlob packagePath "src")
@@ -60,12 +61,14 @@ modulesOf packagePath = do
 moduleGlob :: FilePath -> String -> String
 moduleGlob packagePath tree = Path.concat [ packagePath, tree, "**", "*.purs" ]
 
+-- | Private, depth 3. Used only by `modulesOf`.
 modulesOfKind :: ModuleKind -> String -> Aff (Array WorkspaceModule)
 modulesOfKind kind pattern = do
   paths <- expandGlobs "." [ pattern ]
   pure (map (\path -> { path, kind }) (Set.toUnfoldable paths))
 
 -- | Ask spago which packages this repo owns, and find their modules.
+-- | Uses `toLocalPackage`.
 getWorkspace :: Aff Workspace
 getWorkspace =
   let
@@ -79,12 +82,14 @@ getWorkspace =
       packages <- traverse toLocalPackage (Array.mapMaybe workspaceOnly pkgs)
       pure { packages }
 
+-- | Private. Used only by `getWorkspace`. Uses `modulesOf`.
 toLocalPackage :: SpagoWorkspacePackage -> Aff LocalPackage
 toLocalPackage { name, path, dependencies } = do
   modules <- modulesOf path
   pure { name, path, dependencies, modules }
 
 -- | Parse one module, failing loudly if it does not parse.
+-- | Uses `parseFailure`.
 readModule :: WorkspaceModule -> Aff (CST.Module Void)
 readModule { path } = do
   src <- FS.readTextFile UTF8 path
@@ -93,9 +98,11 @@ readModule { path } = do
     CST.ParseSucceededWithErrors _ errs -> parseFailure path (NEA.head errs)
     CST.ParseFailed err -> parseFailure path err
 
+-- | Private. Used only by `readModule`. Uses `printPositionedError`.
 parseFailure :: ∀ a. FilePath -> PositionedError -> Aff a
 parseFailure path err = Aff.throwError (Aff.error (printPositionedError path err))
 
+-- | Private, depth 2. Used only by `parseFailure`.
 printPositionedError :: FilePath -> PositionedError -> String
 printPositionedError path { position, error: err } =
   fold

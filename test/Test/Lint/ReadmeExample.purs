@@ -11,7 +11,8 @@ import Prelude
 
 import Data.Array as Array
 import Data.Maybe (Maybe(..))
-import Data.String (Pattern(..), contains)
+import Data.String (Pattern(..))
+import Data.String (contains) as Str
 import PureScript.CST.Types (Declaration(..), Ident(..), Name(..))
 import PureScript.CST.Types (Declaration) as CST
 import Lint.Rule
@@ -51,5 +52,5 @@ arityUnlessGenerated = exclude [ generatedCode ] (perDecl maxFunctionArity 3)
 generatedCode :: LintExemption (CST.Declaration Void)
 generatedCode =
   { name: "generated code is not ours to shorten"
-  , appliesTo: \ctx _ -> contains (Pattern ".Generated.") ctx.moduleName
+  , appliesTo: \ctx _ -> Str.contains (Pattern ".Generated.") ctx.moduleName
   }

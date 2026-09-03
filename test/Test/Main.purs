@@ -3,6 +3,7 @@ module Test.Main (main) where
 import Prelude
 
 import Effect (Effect)
+import Test.Lint.ExemptionsSpec as ExemptionsSpec
 import Test.Lint.FixSpec as FixSpec
 import Test.Lint.Internal.DedentSpec as DedentSpec
 import Test.Lint.Internal.RuleSetSpec as RuleSetSpec
@@ -21,3 +22,4 @@ main =
     WorkspaceSpec.spec
     ReadmeExampleSpec.spec
     FixSpec.spec
+    ExemptionsSpec.spec

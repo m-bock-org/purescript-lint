@@ -96,6 +96,7 @@ perPackage lint config =
   PackageRule { exclude: [], disabled: false, check: lint.rule config }
 
 -- | Run a rule that has nothing to configure once per package.
+-- | Uses `perPackage`.
 perPackage_ :: PackageLint Unit -> PackageRule
 perPackage_ lint = perPackage lint unit
 
@@ -118,6 +119,7 @@ perWorkspace lint config =
   WorkspaceRule { exclude: [], disabled: false, check: lint.rule config }
 
 -- | Run a rule that has nothing to configure over the whole workspace.
+-- | Uses `perWorkspace`.
 perWorkspace_ :: WorkspaceLint Unit -> WorkspaceRule
 perWorkspace_ lint = perWorkspace lint unit
 
@@ -153,6 +155,7 @@ instance SurveyLike WorkspaceRule WorkspaceSurvey where
   surveyCheck (WorkspaceRule r) = r.check
 
 -- | Run every survey rule and collect what they found.
+-- | Uses `kept`.
 runSurveyRules
   :: ∀ r s. SurveyLike r s => Array (Grouped r) -> s -> Array String
 runSurveyRules rules survey =
@@ -163,5 +166,6 @@ runSurveyRules rules survey =
   in
     Array.concatMap applyOne rules
 
+-- | Private. Used only by `runSurveyRules`.
 kept :: ∀ r s. SurveyLike r s => r -> SurveyFinding -> Boolean
 kept r finding = not (Array.any (\ex -> ex.appliesTo finding.subject) (surveyExclude r))

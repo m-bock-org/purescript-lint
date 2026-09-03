@@ -14,7 +14,7 @@ import Data.Array as Array
 import Data.Either (Either(..))
 import Data.Array.NonEmpty as NEA
 import Data.Foldable (fold, for_, sum)
-import Data.String.Common (joinWith, split) as String
+import Data.String.Common (joinWith, split) as Str
 import Data.String.Pattern (Pattern(..))
 import Data.Maybe (Maybe(..))
 import Data.Maybe (isNothing) as Maybe
@@ -47,7 +47,10 @@ import Lint.Internal.RuleSet (FlatRules, Rule, flattenRules)
 import Lint.Internal.Survey (PackageSurvey, SurveyModule, runSurveyRules)
 import Control.Monad.Rec.Class (Step(..), tailRecM)
 import Data.Maybe (fromMaybe, isJust) as Maybe
+import Effect.Aff (error, throwError) as Aff
 import Lint.Fix (FixConfig)
+import Lint.Internal.Exemptions (Exemptions)
+import Lint.Internal.Exemptions as Exemptions
 import Lint.Fix as Fix
 import Lint.Internal.Workspace (WorkspaceModule)
 import Node.Encoding (Encoding(..))
@@ -58,14 +61,15 @@ import Lint.Internal.Workspace as Workspace
 -- | reporting everything it finds. `true` when the workspace is clean.
 -- |
 -- | A rule that rewrites is applied: the module is written back.
+-- | Uses `runLinterWith`.
 runLinter :: Array Rule -> Aff Boolean
 runLinter = runLinterWith { skipModules: [], fix: Nothing }
 
--- | `runLinter` with options. Uses `lintWorkspace`, `fixWorkspace`.
 -- |
 -- | Fixes first, then reports what is left - the same order the pure
 -- | autofixes already run in, and for the same reason: what a run
 -- | prints should be the state it left behind, not the state it found.
+-- | Uses `fixWorkspace`, `lintWorkspace`, `printByRule`, `printSummary`.
 runLinterWith :: LintOptions -> Array Rule -> Aff Boolean
 runLinterWith options rules = do
   case options.fix of
@@ -85,15 +89,16 @@ runLinterWith options rules = do
 -- | module's own printed output back in, and a tool that parses its own
 -- | prose has put the feature in the wrong place.
 -- |
--- | `total` counts survey findings too, which have no module and so
 -- | never appear in `located`. That is why it is reported rather than
 -- | derived from the array's length.
+-- | Uses `lintModule`, `reportSurvey`.
 lintWorkspace :: LintOptions -> Array Rule -> Aff LintReport
 lintWorkspace { skipModules } rules = do
+  exemptions <- readOrFail
   workspace <- Workspace.getWorkspace
   let
     flatRules = flattenRules rules
-    configured = { skipModules, flatRules }
+    configured = { skipModules, flatRules, exemptions }
     moduleCount = Array.length (Array.concatMap _.modules workspace.packages)
   scanned <- for workspace.packages \pkg -> do
     perModule <- for pkg.modules (lintModule configured pkg.name)
@@ -117,12 +122,10 @@ lintWorkspace { skipModules } rules = do
     , moduleCount
     }
 
--- | Private. Used only by `runLinterWith`.
 -- |
 -- | Ask for a fix for each finding that has guidance, and keep the ones
 -- | that survive being linted again.
 -- |
--- | Uses `attemptOne`. The judging is the point: a proposal is written,
 -- | the workspace is linted again *in this process*, and the source is
 -- | put back unless the finding is gone and nothing new appeared in
 -- | that module. A proposal that does not parse fails that for free,
@@ -134,6 +137,8 @@ lintWorkspace { skipModules } rules = do
 -- | At most one finding per module, so one run's fixes are independent
 -- | of each other: two in a module stack, the second written on top of
 -- | the first, and then neither can be looked at alone.
+-- | Private, depth 2. Used only by `runLinterWith`. Uses `lintWorkspace`, `sameModule`,
+-- | `hasGuidance`, `attemptOne`.
 fixWorkspace :: LintOptions -> FixConfig -> Array Rule -> Aff Int
 fixWorkspace options fix rules = do
   report <- lintWorkspace options rules
@@ -152,15 +157,15 @@ fixWorkspace options fix rules = do
     pure (if outcome == Fix.Fixed then 1 else 0)
   pure (sum fixes)
 
--- | Private. Used only by `fixWorkspace`.
+-- | Private, depth 3. Used only by `fixWorkspace`.
 hasGuidance :: Array Fix.Guidance -> Located -> Boolean
 hasGuidance table one = Maybe.isJust (Fix.guidanceFor table one.finding.rule.name)
 
--- | Private. Used only by `fixWorkspace`.
+-- | Private, depth 3. Used only by `fixWorkspace`.
 sameModule :: Located -> Located -> Boolean
 sameModule a b = a.moduleName == b.moduleName
 
--- | Private. Used only by `fixWorkspace`. Uses `judge`.
+-- | Private, depth 3. Used only by `fixWorkspace`. Uses `attemptRound`.
 attemptOne
   :: LintOptions
   -> FixConfig
@@ -172,7 +177,7 @@ attemptOne options fix rules before one = do
   was <- FS.readTextFile UTF8 one.path
   tailRecM (attemptRound options fix rules before one was) { left: fix.rounds, broke: [] }
 
--- | Private. Used only by `attemptOne`. Uses `judge`.
+-- | Private, depth 4. Used only by `attemptOne`. Uses `judge`.
 attemptRound
   :: LintOptions
   -> FixConfig
@@ -200,7 +205,7 @@ attemptRound options fix rules before one was state = do
         pure (Loop { left: state.left - 1, broke: judged.broke })
       else pure (Done judged.outcome)
 
--- | Private. Used only by `attemptRound`.
+-- | Private, depth 5. Used only by `attemptRound`. Uses `lintWorkspace`, `same`, `describe`.
 judge
   :: LintOptions
   -> Array Rule
@@ -226,17 +231,30 @@ judge options rules before one was text = do
       , broke: map describe started
       }
 
--- | Private. Used only by `judge`.
+-- | Private, depth 6. Used only by `judge`.
 describe :: Located -> String
 describe one = one.finding.rule.name <> ": " <> one.finding.message
 
--- | Private. Used by `judge`.
+-- | Private, depth 6. Used only by `judge`.
 same :: Located -> Located -> Boolean
 same a b =
   a.moduleName == b.moduleName
     && a.finding.rule.name == b.finding.rule.name
     && a.finding.message == b.finding.message
 
+-- |
+-- | Absent is fine and means no exemptions. Present but malformed is
+-- | not: a mistyped file that quietly exempted nothing would be found
+-- | by a rule firing somewhere nobody expected, months later.
+-- | Private.
+readOrFail :: Aff Exemptions
+readOrFail = do
+  found <- Exemptions.readExemptions
+  case found of
+    Left why -> Aff.throwError (Aff.error why)
+    Right exemptions -> pure exemptions
+
+-- | Private. Used only by `lintWorkspace`.
 reportSurvey :: Configured -> Array PackageSurvey -> Aff Int
 reportSurvey { flatRules } surveys = do
   let
@@ -271,6 +289,7 @@ type LintReport =
 type Configured =
   { skipModules :: Array ModuleExemption
   , flatRules :: FlatRules
+  , exemptions :: Exemptions
   }
 
 type ModuleScan =
@@ -284,6 +303,7 @@ type Located = { moduleName :: String, path :: String, finding :: Finding }
 
 -- | Findings grouped by the rule that made them: what the rule wants,
 -- | then every place it was not met.
+-- | Private, depth 2. Used only by `runLinterWith`. Uses `labelled`.
 printByRule :: Array Located -> Aff Unit
 printByRule located =
   let
@@ -297,7 +317,7 @@ printByRule located =
         sharedHint = if Array.length hints == 1 then Array.head hints else Nothing
       log ""
       log
-        ( "● " <> String.joinWith " » "
+        ( "● " <> Str.joinWith " » "
             (Array.snoc (NEA.head group).finding.groups rule.name)
         )
       log ("    " <> rule.description)
@@ -315,14 +335,16 @@ printByRule located =
 
 -- | One example under its label, with anything after the first line
 -- | indented to sit under it.
+-- | Private, depth 3. Used only by `printByRule`.
 labelled :: String -> String -> Aff Unit
 labelled label text =
-  for_ (Array.mapWithIndex indent (String.split (Pattern "\n") text)) log
+  for_ (Array.mapWithIndex indent (Str.split (Pattern "\n") text)) log
   where
   indent 0 line = "      " <> label <> "  " <> line
   indent _ line = "            " <> line
 
 -- | The one-line total, after everything else.
+-- | Private, depth 2. Used only by `runLinterWith`.
 printSummary :: Int -> Int -> Int -> Aff Unit
 printSummary total withFindings moduleCount = do
   log ""
@@ -336,8 +358,10 @@ printSummary total withFindings moduleCount = do
     , " modules"
     ]
 
+-- | Private. Used only by `lintWorkspace`. Uses `moduleNameOf`, `rewriteDecls`,
+-- | `lintExprsInDecl`.
 lintModule :: Configured -> String -> WorkspaceModule -> Aff ModuleScan
-lintModule { skipModules, flatRules } packageName workspaceModule = do
+lintModule { skipModules, flatRules, exemptions } packageName workspaceModule = do
   original <- Workspace.readModule workspaceModule
   let
     context :: LintContext
@@ -354,11 +378,11 @@ lintModule { skipModules, flatRules } packageName workspaceModule = do
     pure { surveyed, violations: 0, located: [] }
   else do
     let
-      afterModules = runRules context flatRules.modules original
+      afterModules = runRules exemptions context flatRules.modules original
       afterDeclarations = rewriteDecls context afterModules.result
-        (\ctx -> runRules ctx flatRules.declarations)
+        (\ctx -> runRules exemptions ctx flatRules.declarations)
       afterExpressions = rewriteDecls context afterDeclarations.result
-        (lintExprsInDecl flatRules.expressions)
+        (lintExprsInDecl exemptions flatRules.expressions)
       violations = afterModules.violations <> afterDeclarations.violations <>
         afterExpressions.violations
       fixed = afterModules.fixed || afterDeclarations.fixed || afterExpressions.fixed
@@ -375,17 +399,20 @@ lintModule { skipModules, flatRules } packageName workspaceModule = do
 type PerDeclaration =
   LintContext -> CST.Declaration Void -> RuleOutcome (CST.Declaration Void)
 
+-- | Private, depth 3. Used only by `rewriteDecls`.
 declarationNameOf :: CST.Declaration Void -> Maybe String
 declarationNameOf = case _ of
   CST.DeclValue { name: CST.Name { name: CST.Ident n } } -> Just n
   CST.DeclSignature (CST.Labeled { label: CST.Name { name: CST.Ident n } }) -> Just n
   _ -> Nothing
 
+-- | Private, depth 2. Used only by `lintModule`.
 moduleNameOf :: CST.Module Void -> String
 moduleNameOf (CST.Module { header: CST.ModuleHeader { name } }) =
   case name of
     CST.Name { name: CST.ModuleName n } -> n
 
+-- | Private, depth 2. Used only by `lintModule`. Uses `declarationNameOf`.
 rewriteDecls :: LintContext -> CST.Module Void -> PerDeclaration -> RuleOutcome (CST.Module Void)
 rewriteDecls context (CST.Module moduleFields) perDeclaration =
   let
@@ -402,16 +429,18 @@ rewriteDecls context (CST.Module moduleFields) perDeclaration =
 
 type ExprLintState = { violations :: Array Finding, fixed :: Boolean }
 
+-- | Private, depth 2. Used only by `lintModule`.
 lintExprsInDecl
-  :: Array (Grouped ExprRule)
+  :: Exemptions
+  -> Array (Grouped ExprRule)
   -> LintContext
   -> CST.Declaration Void
   -> RuleOutcome (CST.Declaration Void)
-lintExprsInDecl exprRules context decl =
+lintExprsInDecl exemptions exprRules context decl =
   let
     applyExprRules :: CST.Expr Void -> State ExprLintState (CST.Expr Void)
     applyExprRules expr = do
-      let exprResult = runRules context exprRules expr
+      let exprResult = runRules exemptions context exprRules expr
       modify_ \s -> s
         { violations = s.violations <> exprResult.violations
         , fixed = s.fixed || exprResult.fixed

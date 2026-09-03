@@ -105,21 +105,21 @@ spec = do
       after <- FS.readTextFile UTF8 thisFile
       after `shouldEqual` before
 
--- | Private. Used by the specs.
+-- | Private.
 table :: Array Fix.Guidance
 table = [ { rule: "max-function-arity", says: "give it fewer arguments" } ]
 
--- | Private. One rule, deliberately noisy, so there is something to
 -- | attempt.
 -- |
 -- | An empty set made every spec here pass without asking anybody
 -- | anything - which they did, until this was noticed. `max-function-arity`
 -- | at zero fires on any declaration with a binder, so this repository
 -- | always has findings and the judging path always runs.
+-- | Private.
 rules :: Array Rule
 rules = [ RuleSet.rule (perDecl maxFunctionArity 0) ]
 
--- | Private. Used by the specs. Any file that must be unchanged after.
+-- | Private.
 thisFile :: String
 thisFile = "test/Test/Lint/FixSpec.purs"
 

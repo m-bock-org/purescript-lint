@@ -7,16 +7,19 @@ import Data.Maybe (Maybe(..))
 import Partial.Unsafe (unsafeCrashWith)
 import PureScript.CST (RecoveredParserResult(..), parseModule)
 import PureScript.CST.Types (Declaration, Module(..), ModuleBody(..)) as CST
+import Lint.Internal.Exemptions (noExemptions)
 import Lint.Internal.Rule (DeclarationRule, LintContext, ModuleKind(..), perDecl, runRules)
 import Test.Lint.ReadmeExample (arityRule, arityUnlessGenerated, maxFunctionArity)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
+-- | Private.
 declarationsOf :: String -> Array (CST.Declaration Void)
 declarationsOf src = case parseModule src of
   ParseSucceeded (CST.Module { body: CST.ModuleBody { decls } }) -> decls
   _ -> unsafeCrashWith "ReadmeExampleSpec fixture: source does not parse"
 
+-- | Private.
 context :: LintContext
 context =
   { packageName: "sample-pkg"
@@ -26,18 +29,21 @@ context =
   , kind: SourceModule
   }
 
+-- | Private. Used only by `spec`. Uses `declarationsOf`.
 messagesFor :: Int -> String -> Array String
 messagesFor maxArity src =
   Array.concatMap
-    (\decl -> map _.message (runRules context [ { groups: [], rule: perDecl maxFunctionArity maxArity } ] decl).violations)
+    (\decl -> map _.message (runRules noExemptions context [ { groups: [], rule: perDecl maxFunctionArity maxArity } ] decl).violations)
     (declarationsOf src)
 
+-- | Private. Used only by `spec`. Uses `declarationsOf`.
 inModule :: String -> DeclarationRule -> String -> Array String
 inModule moduleName aRule src =
   Array.concatMap
-    (\decl -> map _.message (runRules (context { moduleName = moduleName }) [ { groups: [], rule: aRule } ] decl).violations)
+    (\decl -> map _.message (runRules noExemptions (context { moduleName = moduleName }) [ { groups: [], rule: aRule } ] decl).violations)
     (declarationsOf src)
 
+-- | Uses `messagesFor`, `inModule`.
 spec :: Spec Unit
 spec = describe "the rule the README shows" do
 
