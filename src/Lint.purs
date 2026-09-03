@@ -1,9 +1,18 @@
-module Lint (LintOptions, LintReport, Located, lintWorkspace, runLinter, runLinterWith) where
+module Lint
+  ( LintOptions
+  , LintReport
+  , Located
+  , fixWorkspace
+  , lintWorkspace
+  , runLinter
+  , runLinterWith
+  ) where
 
 import Prelude
 
 import Control.Monad.State (State, modify_, runState)
 import Data.Array as Array
+import Data.Either (Either(..))
 import Data.Array.NonEmpty as NEA
 import Data.Foldable (fold, for_, sum)
 import Data.String.Common (joinWith, split) as String
@@ -37,7 +46,13 @@ import Lint.Internal.Rule
   )
 import Lint.Internal.RuleSet (FlatRules, Rule, flattenRules)
 import Lint.Internal.Survey (PackageSurvey, SurveyModule, runSurveyRules)
+import Control.Monad.Rec.Class (Step(..), tailRecM)
+import Data.Maybe (fromMaybe, isJust) as Maybe
+import Lint.Fix (FixConfig)
+import Lint.Fix as Fix
 import Lint.Internal.Workspace (WorkspaceModule)
+import Node.Encoding (Encoding(..))
+import Node.FS.Aff as FS
 import Lint.Internal.Workspace as Workspace
 
 -- | Run a rule set over the Spago workspace in the current directory,
@@ -96,6 +111,124 @@ lintWorkspace { skipModules } rules = do
     , moduleCount
     }
 
+-- | Ask for a fix for each finding that has guidance, and keep the ones
+-- | that survive being linted again.
+-- |
+-- | Uses `attemptOne`. The judging is the point: a proposal is written,
+-- | the workspace is linted again *in this process*, and the source is
+-- | put back unless the finding is gone and nothing new appeared in
+-- | that module. A proposal that does not parse fails that for free,
+-- | because linting it has to parse it.
+-- |
+-- | Putting it back needs no git and no copy on disk. The source was
+-- | read to build the brief and is still in hand.
+-- |
+-- | At most one finding per module, so one run's fixes are independent
+-- | of each other: two in a module stack, the second written on top of
+-- | the first, and then neither can be looked at alone.
+fixWorkspace :: LintOptions -> FixConfig -> Array Rule -> Aff Int
+fixWorkspace options fix rules = do
+  report <- lintWorkspace options rules
+  let
+    mine = Array.take fix.limit
+      (Array.nubByEq sameModule (Array.filter (hasGuidance fix.guidance) report.located))
+  log ""
+  log
+    ( "  " <> show (Array.length report.located) <> " findings, "
+        <> show (Array.length mine)
+        <> " with guidance to try"
+    )
+  fixes <- for mine \one -> do
+    outcome <- attemptOne options fix rules report.located one
+    log ("  " <> Fix.outcomeLine one.finding.rule.name one.moduleName outcome)
+    pure (if outcome == Fix.Fixed then 1 else 0)
+  pure (sum fixes)
+
+-- | Private. Used only by `fixWorkspace`.
+hasGuidance :: Array Fix.Guidance -> Located -> Boolean
+hasGuidance table one = Maybe.isJust (Fix.guidanceFor table one.finding.rule.name)
+
+-- | Private. Used only by `fixWorkspace`.
+sameModule :: Located -> Located -> Boolean
+sameModule a b = a.moduleName == b.moduleName
+
+-- | Private. Used only by `fixWorkspace`. Uses `judge`.
+attemptOne
+  :: LintOptions
+  -> FixConfig
+  -> Array Rule
+  -> Array Located
+  -> Located
+  -> Aff Fix.Outcome
+attemptOne options fix rules before one = do
+  was <- FS.readTextFile UTF8 one.path
+  tailRecM (attemptRound options fix rules before one was) { left: fix.rounds, broke: [] }
+
+-- | Private. Used only by `attemptOne`. Uses `judge`.
+attemptRound
+  :: LintOptions
+  -> FixConfig
+  -> Array Rule
+  -> Array Located
+  -> Located
+  -> String
+  -> { left :: Int, broke :: Array String }
+  -> Aff (Step { left :: Int, broke :: Array String } Fix.Outcome)
+attemptRound options fix rules before one was state = do
+  proposed <- fix.propose
+    { rule: one.finding.rule.name
+    , moduleName: one.moduleName
+    , path: one.path
+    , message: one.finding.message
+    , guidance: Maybe.fromMaybe "" (Fix.guidanceFor fix.guidance one.finding.rule.name)
+    , source: was
+    , broke: state.broke
+    }
+  case proposed of
+    Left why -> pure (Done (Fix.Declined why))
+    Right text -> do
+      judged <- judge options rules before one was text
+      if state.left > 1 && not (Array.null judged.broke) then
+        pure (Loop { left: state.left - 1, broke: judged.broke })
+      else pure (Done judged.outcome)
+
+-- | Private. Used only by `attemptRound`.
+judge
+  :: LintOptions
+  -> Array Rule
+  -> Array Located
+  -> Located
+  -> String
+  -> String
+  -> Aff { outcome :: Fix.Outcome, broke :: Array String }
+judge options rules before one was text = do
+  FS.writeTextFile UTF8 one.path text
+  after <- lintWorkspace options rules
+  let here = Array.filter (\a -> a.moduleName == one.moduleName) after.located
+  let wasHere = Array.filter (\a -> a.moduleName == one.moduleName) before
+  let started = Array.filter (\a -> not (Array.any (same a) wasHere)) here
+  if Array.any (same one) here then do
+    FS.writeTextFile UTF8 one.path was
+    pure { outcome: Fix.Declined "the finding is still there", broke: [] }
+  else if Array.null started then pure { outcome: Fix.Fixed, broke: [] }
+  else do
+    FS.writeTextFile UTF8 one.path was
+    pure
+      { outcome: Fix.Declined ("it started " <> show (Array.length started) <> " new findings")
+      , broke: map describe started
+      }
+
+-- | Private. Used only by `judge`.
+describe :: Located -> String
+describe one = one.finding.rule.name <> ": " <> one.finding.message
+
+-- | Private. Used by `judge`.
+same :: Located -> Located -> Boolean
+same a b =
+  a.moduleName == b.moduleName
+    && a.finding.rule.name == b.finding.rule.name
+    && a.finding.message == b.finding.message
+
 reportSurvey :: Configured -> Array PackageSurvey -> Aff Int
 reportSurvey { flatRules } surveys = do
   let
@@ -129,7 +262,7 @@ type ModuleScan =
   }
 
 -- | One finding, and the module it was found in.
-type Located = { moduleName :: String, finding :: Finding }
+type Located = { moduleName :: String, path :: String, finding :: Finding }
 
 -- | Findings grouped by the rule that made them: what the rule wants,
 -- | then every place it was not met.
@@ -216,7 +349,9 @@ lintModule { skipModules, flatRules } packageName workspaceModule = do
     pure
       { surveyed
       , violations: Array.length violations
-      , located: map (\f -> { moduleName: context.moduleName, finding: f }) violations
+      , located: map
+          (\f -> { moduleName: context.moduleName, path: context.path, finding: f })
+          violations
       }
 
 type PerDeclaration =
