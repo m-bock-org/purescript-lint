@@ -13,7 +13,7 @@ import Data.Maybe (Maybe(..))
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Effect.Ref as Ref
-import Lint (fixWorkspace)
+import Lint (runLinterWith)
 import Lint.Fix (guidanceFor, outcomeLine)
 import Lint.Fix as Fix
 import Lint.Rule (perDecl)
@@ -54,16 +54,18 @@ spec = do
       -- Naming one meant asserting that an untouched file was
       -- untouched, and that passed with the revert deleted.
       seen <- liftEffect (Ref.new Nothing)
-      fixed <- fixWorkspace { skipModules: [] }
-        { propose: \brief -> do
-            liftEffect (Ref.write (Just { path: brief.path, source: brief.source }) seen)
-            pure (Right (brief.source <> "\n-- a proposal that fixes nothing\n"))
-        , guidance: table
-        , limit: 1
-        , rounds: 1
+      _ <- runLinterWith
+        { skipModules: []
+        , fix: Just
+            { propose: \brief -> do
+                liftEffect (Ref.write (Just { path: brief.path, source: brief.source }) seen)
+                pure (Right (brief.source <> "\n-- a proposal that fixes nothing\n"))
+            , guidance: table
+            , limit: 1
+            , rounds: 1
+            }
         }
         rules
-      fixed `shouldEqual` 0
       touched <- liftEffect (Ref.read seen)
       case touched of
         Nothing -> fail "nothing was proposed to, so this spec checked nothing"
@@ -73,30 +75,34 @@ spec = do
 
     it "asks nobody when no rule has guidance" do
       asked <- liftEffect (Ref.new 0)
-      fixed <- fixWorkspace { skipModules: [] }
-        { propose: \_ -> do
-            liftEffect (Ref.modify_ (_ + 1) asked)
-            pure (Left "should never be called")
-        , guidance: []
-        , limit: 10
-        , rounds: 1
+      _ <- runLinterWith
+        { skipModules: []
+        , fix: Just
+            { propose: \_ -> do
+                liftEffect (Ref.modify_ (_ + 1) asked)
+                pure (Left "should never be called")
+            , guidance: []
+            , limit: 10
+            , rounds: 1
+            }
         }
         rules
       count <- liftEffect (Ref.read asked)
       count `shouldEqual` 0
-      fixed `shouldEqual` 0
 
     it "a proposer that declines changes nothing" do
       before <- FS.readTextFile UTF8 thisFile
-      fixed <- fixWorkspace { skipModules: [] }
-        { propose: \_ -> pure (Left "not today")
-        , guidance: table
-        , limit: 1
-        , rounds: 2
+      _ <- runLinterWith
+        { skipModules: []
+        , fix: Just
+            { propose: \_ -> pure (Left "not today")
+            , guidance: table
+            , limit: 1
+            , rounds: 2
+            }
         }
         rules
       after <- FS.readTextFile UTF8 thisFile
-      fixed `shouldEqual` 0
       after `shouldEqual` before
 
 -- | Private. Used by the specs.

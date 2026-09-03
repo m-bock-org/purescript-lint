@@ -2,7 +2,6 @@ module Lint
   ( LintOptions
   , LintReport
   , Located
-  , fixWorkspace
   , lintWorkspace
   , runLinter
   , runLinterWith
@@ -60,11 +59,18 @@ import Lint.Internal.Workspace as Workspace
 -- |
 -- | A rule that rewrites is applied: the module is written back.
 runLinter :: Array Rule -> Aff Boolean
-runLinter = runLinterWith { skipModules: [] }
+runLinter = runLinterWith { skipModules: [], fix: Nothing }
 
--- | `runLinter` with options. Uses `lintWorkspace`.
+-- | `runLinter` with options. Uses `lintWorkspace`, `fixWorkspace`.
+-- |
+-- | Fixes first, then reports what is left - the same order the pure
+-- | autofixes already run in, and for the same reason: what a run
+-- | prints should be the state it left behind, not the state it found.
 runLinterWith :: LintOptions -> Array Rule -> Aff Boolean
 runLinterWith options rules = do
+  case options.fix of
+    Nothing -> pure unit
+    Just fix -> void (fixWorkspace options fix rules)
   report <- lintWorkspace options rules
   printByRule report.located
   printSummary report.total (Array.length (Array.nub (map _.moduleName report.located)))
@@ -111,6 +117,8 @@ lintWorkspace { skipModules } rules = do
     , moduleCount
     }
 
+-- | Private. Used only by `runLinterWith`.
+-- |
 -- | Ask for a fix for each finding that has guidance, and keep the ones
 -- | that survive being linted again.
 -- |
@@ -240,8 +248,18 @@ reportSurvey { flatRules } surveys = do
   for_ findings \msg -> log ("  " <> msg)
   pure (Array.length findings)
 
+-- | Everything a run is configured with.
+-- |
 -- | `skipModules` names modules no rule should see at all.
-type LintOptions = { skipModules :: Array ModuleExemption }
+-- |
+-- | `fix` is how effect-resolved fixes are turned on, and `Nothing` is
+-- | how they stay off. It carries the effect itself - a function from a
+-- | brief to new source - so *what performs it* is decided here, from
+-- | outside, and nothing in this package can find out what it got.
+type LintOptions =
+  { skipModules :: Array ModuleExemption
+  , fix :: Maybe FixConfig
+  }
 
 -- | Everything one run saw.
 type LintReport =
