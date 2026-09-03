@@ -73,7 +73,7 @@ byPath = [ { rule: "*", modules: [], paths: [ "Scratch.purs" ], why: "because" }
 -- | Private. Used by the specs. Uses `rules`.
 countFindings :: Aff Int
 countFindings = do
-  report <- lintWorkspace { skipModules: [] } rules
+  report <- lintWorkspace { skipModules: [], fix: Nothing } rules
   pure (Array.length (Array.filter inInternal report.located))
 
 -- | Private. Used only by `countFindings`.
