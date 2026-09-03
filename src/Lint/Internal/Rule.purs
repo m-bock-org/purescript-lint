@@ -20,7 +20,6 @@ module Lint.Internal.Rule
   , class HasExclude
   , class RuleLike
   , class RuleOptions
-  , dedent
   , disabled
   , exclude
   , fixed
@@ -160,33 +159,6 @@ skipWhen :: ∀ a. Guarded a -> LintContext -> a -> LintResult a
 skipWhen { exemptions, check } context value =
   Maybe.maybe (check context value) (const Passed)
     (Array.find (\exemption -> exemption.appliesTo context value) exemptions)
-
--- | Strip a leading and trailing blank line and the shared indentation
--- | from the rest, so an example can be written indented to match
--- | the code around it.
-dedent :: String -> String
-dedent raw =
-  let
-    allLines = Str.split (Str.Pattern "\n") raw
-
-    withoutLeadingBlank = case Array.head allLines, Array.tail allLines of
-      Just first, Just rest | Str.trim first == "" -> rest
-      _, _ -> allLines
-
-    contentLines = case Array.init withoutLeadingBlank, Array.last withoutLeadingBlank of
-      Just initLines, Just lastLine | Str.trim lastLine == "" -> initLines
-      _, _ -> withoutLeadingBlank
-
-    indentOf line = Str.length line - Str.length (Str.dropWhile (_ == ' ') line)
-
-    nonBlank = Array.filter (\l -> Str.trim l /= "") contentLines
-    commonIndent = Maybe.fromMaybe 0 (Foldable.minimum (map indentOf nonBlank))
-
-    stripIndent line
-      | Str.trim line == "" = ""
-      | otherwise = Str.drop commonIndent line
-  in
-    Str.joinWith "\n" (map stripIndent contentLines)
 
 -- | Options common to a rule at any level.
 class RuleOptions r where

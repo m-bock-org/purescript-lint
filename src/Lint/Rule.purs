@@ -21,7 +21,6 @@ import Lint.Internal.Rule
   , ModuleKind(..)
   , ModuleLint
   , ModuleRule
-  , dedent
   , disabled
   , exclude
   , fixed
@@ -34,3 +33,5 @@ import Lint.Internal.Rule
   , violations
   , withHint
   ) as Exports
+
+import Lint.Internal.Dedent (dedent) as Exports
