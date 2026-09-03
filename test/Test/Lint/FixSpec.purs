@@ -63,6 +63,7 @@ spec = do
             , guidance: table
             , limit: 1
             , rounds: 1
+            , verify: Nothing
             }
         }
         rules
@@ -84,11 +85,48 @@ spec = do
             , guidance: []
             , limit: 10
             , rounds: 1
+            , verify: Nothing
             }
         }
         rules
       count <- liftEffect (Ref.read asked)
       count `shouldEqual` 0
+
+    -- An empty module has no declarations, so every finding in it is
+    -- gone and the re-lint is perfectly happy - which is the whole
+    -- shape this guards against. Lint cannot see that the rest of the
+    -- workspace no longer compiles, because no rule is about that.
+    it "a proposal that lints clean but fails verify is put back, and the proposer is told why" do
+      rounds <- liftEffect (Ref.new [])
+      proposed <- liftEffect (Ref.new Nothing)
+      _ <- runLinterWith
+        { skipModules: []
+        , fix: Just
+            { propose: \brief -> do
+                let emptied = "module " <> brief.moduleName <> " where\n"
+                liftEffect (Ref.modify_ (_ <> [ brief.broke ]) rounds)
+                liftEffect (Ref.write (Just { path: brief.path, emptied }) proposed)
+                pure (Right emptied)
+            , guidance: table
+            , limit: 1
+            , rounds: 2
+            , verify: Just (pure (Left "UnknownName: Nothing"))
+            }
+        }
+        rules
+
+      -- Told what did not compile, and asked again - a failed verify is
+      -- a round of the retry loop, not the end of the attempt.
+      asked <- liftEffect (Ref.read rounds)
+      asked `shouldEqual` [ [], [ "UnknownName: Nothing" ] ]
+
+      -- And the file is not left emptied.
+      touched <- liftEffect (Ref.read proposed)
+      case touched of
+        Nothing -> fail "nothing was proposed to, so this proved nothing"
+        Just { path, emptied } -> do
+          now <- FS.readTextFile UTF8 path
+          when (now == emptied) (fail (path <> " was left as the rejected proposal"))
 
     it "a proposer that declines changes nothing" do
       before <- FS.readTextFile UTF8 thisFile
@@ -99,6 +137,7 @@ spec = do
             , guidance: table
             , limit: 1
             , rounds: 2
+            , verify: Nothing
             }
         }
         rules

@@ -200,21 +200,27 @@ attemptRound options fix rules before one was state = do
   case proposed of
     Left why -> pure (Done (Fix.Declined why))
     Right text -> do
-      judged <- judge options rules before one was text
+      judged <- judge options fix rules before one was text
       if state.left > 1 && not (Array.null judged.broke) then
         pure (Loop { left: state.left - 1, broke: judged.broke })
       else pure (Done judged.outcome)
 
--- | Private, depth 5. Used only by `attemptRound`. Uses `lintWorkspace`, `same`, `describe`.
+-- | Private, depth 5. Used only by `attemptRound`. Uses `lintWorkspace`, `same`,
+-- | `describe`, `verified`.
+-- |
+-- | Two gates, cheapest first. The re-lint is a parse of the workspace;
+-- | `fix.verify` is usually a compile, so it runs only for a proposal
+-- | that has already earned it.
 judge
   :: LintOptions
+  -> Fix.FixConfig
   -> Array Rule
   -> Array Located
   -> Located
   -> String
   -> String
   -> Aff { outcome :: Fix.Outcome, broke :: Array String }
-judge options rules before one was text = do
+judge options fix rules before one was text = do
   FS.writeTextFile UTF8 one.path text
   after <- lintWorkspace options rules
   let here = Array.filter (\a -> a.moduleName == one.moduleName) after.located
@@ -223,13 +229,40 @@ judge options rules before one was text = do
   if Array.any (same one) here then do
     FS.writeTextFile UTF8 one.path was
     pure { outcome: Fix.Declined "the finding is still there", broke: [] }
-  else if Array.null started then pure { outcome: Fix.Fixed, broke: [] }
-  else do
+  else if not (Array.null started) then do
     FS.writeTextFile UTF8 one.path was
     pure
-      { outcome: Fix.Declined ("it started " <> show (Array.length started) <> " new findings")
+      { outcome: Fix.Declined ("it introduced " <> newFindings started)
       , broke: map describe started
       }
+  else do
+    built <- verified fix
+    case built of
+      Left why -> do
+        FS.writeTextFile UTF8 one.path was
+        pure { outcome: Fix.Declined "it does not compile", broke: [ why ] }
+      Right _ -> pure { outcome: Fix.Fixed, broke: [] }
+
+-- | Private, depth 6. Used only by `judge`.
+-- |
+-- | No `verify` configured means nothing to fail, not nothing to run.
+verified :: Fix.FixConfig -> Aff (Either String Unit)
+verified fix = case fix.verify of
+  Nothing -> pure (Right unit)
+  Just check -> check
+
+-- | Private, depth 6. Used only by `judge`. Uses `describe`.
+-- |
+-- | Names the rules rather than counting them. This line is what a
+-- | person reads to decide whether a proposal was close or nowhere
+-- | near, and two rules that answer each other show up here as a pair -
+-- | which a count hides.
+newFindings :: Array Located -> String
+newFindings started = case started of
+  [ only ] -> "a new finding, " <> describe only
+  _ ->
+    show (Array.length started) <> " new findings: "
+      <> String.joinWith ", " (Array.nub (map (\a -> a.finding.rule.name) started))
 
 -- | Private, depth 6. Used only by `judge`.
 describe :: Located -> String
