@@ -4,6 +4,7 @@ import Prelude
 
 import Control.Monad.State (State, modify_, runState)
 import Data.Array as Array
+import Data.Either (Either(..))
 import Data.Array.NonEmpty as NEA
 import Data.Foldable (fold, for_, sum)
 import Data.String.Common (joinWith, split) as String
@@ -35,6 +36,9 @@ import Lint.Internal.Rule
   , RuleOutcome
   , runRules
   )
+import Effect.Aff (error, throwError) as Aff
+import Lint.Internal.Exemptions (Exemptions)
+import Lint.Internal.Exemptions as Exemptions
 import Lint.Internal.RuleSet (FlatRules, Rule, flattenRules)
 import Lint.Internal.Survey (PackageSurvey, SurveyModule, runSurveyRules)
 import Lint.Internal.Workspace (WorkspaceModule)
@@ -69,10 +73,11 @@ runLinterWith options rules = do
 -- | derived from the array's length.
 lintWorkspace :: LintOptions -> Array Rule -> Aff LintReport
 lintWorkspace { skipModules } rules = do
+  exemptions <- readOrFail
   workspace <- Workspace.getWorkspace
   let
     flatRules = flattenRules rules
-    configured = { skipModules, flatRules }
+    configured = { skipModules, flatRules, exemptions }
     moduleCount = Array.length (Array.concatMap _.modules workspace.packages)
   scanned <- for workspace.packages \pkg -> do
     perModule <- for pkg.modules (lintModule configured pkg.name)
@@ -95,6 +100,18 @@ lintWorkspace { skipModules } rules = do
     , total
     , moduleCount
     }
+
+-- | Private. Used only by `lintWorkspace`.
+-- |
+-- | Absent is fine and means no exemptions. Present but malformed is
+-- | not: a mistyped file that quietly exempted nothing would be found
+-- | by a rule firing somewhere nobody expected, months later.
+readOrFail :: Aff Exemptions
+readOrFail = do
+  found <- Exemptions.readExemptions
+  case found of
+    Left why -> Aff.throwError (Aff.error why)
+    Right exemptions -> pure exemptions
 
 reportSurvey :: Configured -> Array PackageSurvey -> Aff Int
 reportSurvey { flatRules } surveys = do
@@ -120,6 +137,7 @@ type LintReport =
 type Configured =
   { skipModules :: Array ModuleExemption
   , flatRules :: FlatRules
+  , exemptions :: Exemptions
   }
 
 type ModuleScan =
@@ -186,7 +204,7 @@ printSummary total withFindings moduleCount = do
     ]
 
 lintModule :: Configured -> String -> WorkspaceModule -> Aff ModuleScan
-lintModule { skipModules, flatRules } packageName workspaceModule = do
+lintModule { skipModules, flatRules, exemptions } packageName workspaceModule = do
   original <- Workspace.readModule workspaceModule
   let
     context :: LintContext
@@ -203,11 +221,11 @@ lintModule { skipModules, flatRules } packageName workspaceModule = do
     pure { surveyed, violations: 0, located: [] }
   else do
     let
-      afterModules = runRules context flatRules.modules original
+      afterModules = runRules exemptions context flatRules.modules original
       afterDeclarations = rewriteDecls context afterModules.result
-        (\ctx -> runRules ctx flatRules.declarations)
+        (\ctx -> runRules exemptions ctx flatRules.declarations)
       afterExpressions = rewriteDecls context afterDeclarations.result
-        (lintExprsInDecl flatRules.expressions)
+        (lintExprsInDecl exemptions flatRules.expressions)
       violations = afterModules.violations <> afterDeclarations.violations <>
         afterExpressions.violations
       fixed = afterModules.fixed || afterDeclarations.fixed || afterExpressions.fixed
@@ -250,15 +268,16 @@ rewriteDecls context (CST.Module moduleFields) perDeclaration =
 type ExprLintState = { violations :: Array Finding, fixed :: Boolean }
 
 lintExprsInDecl
-  :: Array (Grouped ExprRule)
+  :: Exemptions
+  -> Array (Grouped ExprRule)
   -> LintContext
   -> CST.Declaration Void
   -> RuleOutcome (CST.Declaration Void)
-lintExprsInDecl exprRules context decl =
+lintExprsInDecl exemptions exprRules context decl =
   let
     applyExprRules :: CST.Expr Void -> State ExprLintState (CST.Expr Void)
     applyExprRules expr = do
-      let exprResult = runRules context exprRules expr
+      let exprResult = runRules exemptions context exprRules expr
       modify_ \s -> s
         { violations = s.violations <> exprResult.violations
         , fixed = s.fixed || exprResult.fixed

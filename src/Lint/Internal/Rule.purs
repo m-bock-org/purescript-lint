@@ -50,6 +50,8 @@ import Data.Maybe (fromMaybe, maybe) as Maybe
 import Data.String (Pattern(..)) as Str
 import Data.String.CodeUnits (drop, dropWhile, length) as Str
 import Data.String.Common (joinWith, split, trim) as Str
+import Lint.Internal.Exemptions (Exemptions)
+import Lint.Internal.Exemptions as Exemptions
 import Node.Path (FilePath)
 import PureScript.CST.Types (Declaration, Expr, Module) as CST
 
@@ -60,7 +62,6 @@ data LintResult a
   | Fixed a
 
 -- | Every finding a rule made. A rule passes by finding nothing, so
--- | `violations []` is how it says so.
 violations :: ∀ a. Array String -> LintResult a
 violations found =
   Maybe.maybe Passed (\vs -> Violations vs Nothing) (NEA.fromArray found)
@@ -220,6 +221,7 @@ newtype ModuleRule = ModuleRule
   }
 
 -- | Run this rule once per module, at this setting.
+-- | Uses `ruleInfoOf`.
 perModule :: ∀ cfg. ModuleLint cfg -> cfg -> ModuleRule
 perModule lint config = ModuleRule
   { exclude: []
@@ -229,6 +231,7 @@ perModule lint config = ModuleRule
   }
 
 -- | Run a rule that has nothing to configure once per module.
+-- | Uses `perModule`.
 perModule_ :: ModuleLint Unit -> ModuleRule
 perModule_ lint = perModule lint unit
 
@@ -253,6 +256,7 @@ newtype DeclarationRule = DeclarationRule
   }
 
 -- | Run this rule once per top-level declaration, at this setting.
+-- | Uses `ruleInfoOf`.
 perDecl :: ∀ cfg. DeclarationLint cfg -> cfg -> DeclarationRule
 perDecl lint config = DeclarationRule
   { exclude: []
@@ -262,6 +266,7 @@ perDecl lint config = DeclarationRule
   }
 
 -- | Run a rule that has nothing to configure once per declaration.
+-- | Uses `perDecl`.
 perDecl_ :: DeclarationLint Unit -> DeclarationRule
 perDecl_ lint = perDecl lint unit
 
@@ -287,6 +292,7 @@ newtype ExprRule = ExprRule
 
 -- | Run this rule over every expression, bottom-up, so a rewrite is
 -- | visible to the rules that see the enclosing expression.
+-- | Uses `ruleInfoOf`.
 perExpr :: ∀ cfg. ExprLint cfg -> cfg -> ExprRule
 perExpr lint config = ExprRule
   { exclude: []
@@ -296,6 +302,7 @@ perExpr lint config = ExprRule
   }
 
 -- | Run a rule that has nothing to configure over every expression.
+-- | Uses `perExpr`.
 perExpr_ :: ExprLint Unit -> ExprRule
 perExpr_ lint = perExpr lint unit
 
@@ -313,6 +320,7 @@ instance RuleLike ExprRule (CST.Expr Void) where
 
 -- | Everything a report needs of a rule, taken while its setting is
 -- | still in scope.
+-- | Private.
 ruleInfoOf
   :: ∀ cfg r
    . { name :: String
@@ -361,14 +369,36 @@ type Finding =
 -- | any rule fixed it), whether that happened, and everything found.
 type RuleOutcome a = { result :: a, fixed :: Boolean, violations :: Array Finding }
 
+-- |
+-- | The file's exemptions are consulted here rather than attached to
+-- | rules, because they are a claim about a repository and the rule set
+-- | is shared between repositories. A rule does not know where it is
+-- | running; this does.
+-- | Private. Used only by `runRules`.
+exemptHere :: Exemptions -> LintContext -> String -> Boolean
+exemptHere exemptions context rule = Exemptions.matches exemptions
+  { rule
+  , moduleName: context.moduleName
+  , path: context.path
+  , declarationName: context.declarationName
+  }
+
 -- | Run every rule over one value, threading each rewrite into the next
 -- | rule's input.
+-- | Uses `exemptHere`, `skipWhen`.
 runRules
-  :: ∀ r a. RuleLike r a => LintContext -> Array (Grouped r) -> a -> RuleOutcome a
-runRules context rules initial =
+  :: ∀ r a
+   . RuleLike r a
+  => Exemptions
+  -> LintContext
+  -> Array (Grouped r)
+  -> a
+  -> RuleOutcome a
+runRules exemptions context rules initial =
   let
     applyOne acc { groups, rule: r }
       | ruleDisabled r = acc
+      | exemptHere exemptions context (ruleInfo r).name = acc
       | otherwise =
           case skipWhen { exemptions: ruleExclude r, check: ruleCheck r } context acc.result of
             Passed -> acc
