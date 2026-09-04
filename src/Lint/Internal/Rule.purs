@@ -40,15 +40,11 @@ module Lint.Internal.Rule
 
 import Prelude
 
-import Data.Array (filter, find, foldl, head, init, last, tail) as Array
+import Data.Array (find, foldl) as Array
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty (fromArray, toArray) as NEA
-import Data.Foldable (minimum) as Foldable
 import Data.Maybe (Maybe(..))
-import Data.Maybe (fromMaybe, maybe) as Maybe
-import Data.String (Pattern(..)) as Str
-import Data.String.CodeUnits (drop, dropWhile, length) as Str
-import Data.String.Common (joinWith, split, trim) as Str
+import Data.Maybe (maybe) as Maybe
 import Lint.Internal.Exemptions (Exemptions)
 import Lint.Internal.Exemptions as Exemptions
 import Node.Path (FilePath)
