@@ -105,6 +105,7 @@ perPackage lint config =
   PackageRule { name: lint.name, exclude: [], disabled: false, check: lint.rule config }
 
 -- | Run a rule that has nothing to configure once per package.
+-- | Uses `perPackage`.
 perPackage_ :: PackageLint Unit -> PackageRule
 perPackage_ lint = perPackage lint unit
 
@@ -128,6 +129,7 @@ perWorkspace lint config =
   WorkspaceRule { name: lint.name, exclude: [], disabled: false, check: lint.rule config }
 
 -- | Run a rule that has nothing to configure over the whole workspace.
+-- | Uses `perWorkspace`.
 perWorkspace_ :: WorkspaceLint Unit -> WorkspaceRule
 perWorkspace_ lint = perWorkspace lint unit
 
@@ -172,6 +174,7 @@ instance SurveyLike WorkspaceRule WorkspaceSurvey where
   surveyName (WorkspaceRule r) = r.name
 
 -- | Run every survey rule and collect what they found.
+-- | Uses `kept`, `notExempt`.
 runSurveyRules
   :: ∀ r s. SurveyLike r s => Exemptions -> Array (Grouped r) -> s -> Array String
 runSurveyRules exemptions rules survey =
@@ -183,16 +186,17 @@ runSurveyRules exemptions rules survey =
   in
     Array.concatMap applyOne rules
 
+-- | Private. Used only by `runSurveyRules`.
 kept :: ∀ r s. SurveyLike r s => r -> SurveyFinding -> Boolean
 kept r finding = not (Array.any (\ex -> ex.appliesTo finding.subject) (surveyExclude r))
 
--- | Private. Used only by `runSurveyRules`. Uses `subjectName`.
 -- |
 -- | A survey rule sees the whole workspace, so its findings are about a
 -- | module, package or namespace rather than about a place in a file -
 -- | which is why they are filtered after the rule has looked rather
 -- | than skipped before it. The file matches on the subject's name, so
 -- | a module named there is exempt whichever kind of rule found it.
+-- | Private. Used only by `runSurveyRules`. Uses `subjectName`.
 notExempt :: ∀ r s. SurveyLike r s => Exemptions -> r -> SurveyFinding -> Boolean
 notExempt exemptions r finding = not
   ( Exemptions.matches exemptions
@@ -203,7 +207,7 @@ notExempt exemptions r finding = not
       }
   )
 
--- | Private. Used only by `notExempt`.
+-- | Private, depth 2. Used only by `notExempt`.
 subjectName :: Subject -> String
 subjectName = case _ of
   Namespace name -> name

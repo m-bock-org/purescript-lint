@@ -41,6 +41,7 @@ type SpagoWorkspacePackage =
 data SpagoPkg = PkgOther | PkgWorkspace SpagoWorkspacePackage
 
 -- | Every package spago knows about, ours and its dependencies.
+-- | Uses `decodeSpagoPkg`.
 spagoLsPackages :: Aff (Array SpagoPkg)
 spagoLsPackages = do
   raw <- runSpagoLsPackages
@@ -49,11 +50,13 @@ spagoLsPackages = do
     Left err -> Aff.throwError
       (Aff.error ("spago ls packages --json: " <> printJsonDecodeError err))
 
+-- | Private.
 runSpagoLsPackages :: Aff String
 runSpagoLsPackages = liftEffect do
   buf <- execSync "spago ls packages --json"
   Buffer.toString UTF8 buf
 
+-- | Private. Used only by `spagoLsPackages`. Uses `dependenciesOr`.
 decodeSpagoPkg :: String -> DecodeJson SpagoPkg
 decodeSpagoPkg name = ado
   tagged <- decodeAttempt (decodeRecord { type: decodeString })
@@ -65,6 +68,7 @@ decodeSpagoPkg name = ado
         PkgWorkspace { name, path, dependencies: dependenciesOr declared }
       _, _ -> PkgOther
 
+-- | Private.
 workspacePathOf :: DecodeJson { value :: { path :: String } }
 workspacePathOf = decodeRecord { value: decodeRecord { path: decodeString } }
 
@@ -72,16 +76,20 @@ workspacePathOf = decodeRecord { value: decodeRecord { path: decodeString } }
 -- | or as a map with a version range, and the range is nothing this
 -- | reads, so an entry that is not a plain string is dropped rather
 -- | than failing the whole package.
+-- | Private.
 workspaceDependenciesOf :: DecodeJson { value :: { package :: { dependencies :: Array String } } }
 workspaceDependenciesOf = decodeRecord
   { value: decodeRecord { package: decodeRecord { dependencies: decodeNames } } }
 
+-- | Private. Uses `keepNames`.
 decodeNames :: DecodeJson (Array String)
 decodeNames = map keepNames (decodeArray (decodeAttempt decodeString))
 
+-- | Private. Used only by `decodeNames`.
 keepNames :: Array (Either JsonDecodeError String) -> Array String
 keepNames = Array.mapMaybe Either.hush
 
+-- | Private, depth 2. Used only by `decodeSpagoPkg`.
 dependenciesOr
   :: Either JsonDecodeError { value :: { package :: { dependencies :: Array String } } }
   -> Array String

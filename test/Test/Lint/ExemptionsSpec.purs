@@ -25,6 +25,7 @@ import Test.Lint.ReadmeExample (maxFunctionArity)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
+-- | Uses `withoutExemptions`, `withExemptions`.
 spec :: Spec Unit
 spec = do
   describe "the exemption file" do
@@ -76,25 +77,25 @@ spec = do
       matches sample { rule: "anything", moduleName: "A.B", path: "", declarationName: Nothing }
         `shouldEqual` true
 
--- | Private. Used by the specs.
+-- | Private.
 sample :: Array { modules :: Array String, paths :: Array String, rule :: String, why :: String }
 sample = [ { rule: "*", modules: [ "A.*" ], paths: [], why: "because" } ]
 
--- | Private. Used by the specs.
+-- | Private.
 byPath :: Array { modules :: Array String, paths :: Array String, rule :: String, why :: String }
 byPath = [ { rule: "*", modules: [], paths: [ "Scratch.purs" ], why: "because" } ]
 
--- | Private. Used by the specs. Uses `rules`.
+-- | Private. Uses `inInternal`.
 countFindings :: Aff Int
 countFindings = do
   report <- lintWorkspace { skipModules: [], fix: Nothing, standing: Exemptions.All } rules
   pure (Array.length (Array.filter inInternal report.located))
 
--- | Private. Used only by `countFindings`.
-inInternal :: forall r. { moduleName :: String | r } -> Boolean
+-- | Private.
+inInternal :: ∀ r. { moduleName :: String | r } -> Boolean
 inInternal _ = true
 
--- | Private. Used by the specs.
+-- | Private.
 silencing :: String
 silencing =
   """
@@ -107,14 +108,14 @@ silencing =
   }
   """
 
--- | Private. Used by the specs. Uses `restoring`.
-withExemptions :: forall a. String -> Aff a -> Aff a
+-- | Private. Used only by `spec`. Uses `restoring`.
+withExemptions :: ∀ a. String -> Aff a -> Aff a
 withExemptions text action = restoring do
   FS.writeTextFile UTF8 exemptFile text
   action
 
--- | Private. Used by the specs. The same claim as `silencing`, filed
 -- | as debt rather than as a decision.
+-- | Private.
 pendingOnly :: String
 pendingOnly =
   """
@@ -127,7 +128,7 @@ pendingOnly =
   }
   """
 
--- | Private. Used by the specs. What the nightly fixer sees.
+-- | Private. Uses `inInternal`.
 countFindingsForFixer :: Aff Int
 countFindingsForFixer = do
   report <- lintWorkspace
@@ -135,13 +136,12 @@ countFindingsForFixer = do
     rules
   pure (Array.length (Array.filter inInternal report.located))
 
--- | Private. Used by the specs. Uses `restoring`.
-withoutExemptions :: forall a. Aff a -> Aff a
+-- | Private. Used only by `spec`. Uses `restoring`.
+withoutExemptions :: ∀ a. Aff a -> Aff a
 withoutExemptions action = restoring do
   _ <- Aff.attempt (FS.unlink exemptFile)
   action
 
--- | Private, depth 2. Used by `withExemptions`, `withoutExemptions`.
 -- |
 -- | The saving is the point. `exemptFile` is a fixed name in the
 -- | current directory, and the current directory when the suite runs
@@ -153,7 +153,8 @@ withoutExemptions action = restoring do
 -- |
 -- | Restores through a failure too, or the first broken assertion
 -- | leaves the repository in that state again.
-restoring :: forall a. Aff a -> Aff a
+-- | Private.
+restoring :: ∀ a. Aff a -> Aff a
 restoring action = do
   saved <- Aff.attempt (FS.readTextFile UTF8 exemptFile)
   outcome <- Aff.attempt action
@@ -162,6 +163,6 @@ restoring action = do
     Right text -> FS.writeTextFile UTF8 exemptFile text
   either throwError pure outcome
 
--- | Private. Used by `countFindings`.
+-- | Private.
 rules :: Array Rule
 rules = [ RuleSet.rule (perDecl maxFunctionArity 0) ]
