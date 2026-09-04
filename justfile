@@ -53,13 +53,7 @@ check: strict test docs-check
 # copy, not symlinks: purs writes into output/<Module>/ in place, and a
 # read-only store symlink dies on the first local edit.
 output:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    built="$(nix build .#testOutput --no-link --print-out-paths)"
-    rm -rf output
-    cp -aL "$built" output
-    chmod -R u+w output
-    echo "output/ restored from $built"
+    nix run .#restoreOutput
 
 # The style, run as a binary rather than as a dependency.
 #
@@ -70,5 +64,9 @@ output:
 #
 # `--fix <command>` names a program that proposes fixes for findings the
 # style has guidance for. The linter judges what comes back.
+# Pinned by rev, and it has to be. Unpinned, this fetched whatever the
+# linter's main happened to be when CI ran - so this repository could go
+# red without anyone touching it, and the rule set moved three times in
+# one afternoon. A gate that moves under you is not a gate.
 lint *ARGS:
-    nix run git+ssh://git@github.com/m-bock-org/purescript-lint-regulator#lint-public -- {{ARGS}}
+    nix run 'git+ssh://git@github.com/m-bock-org/purescript-lint-regulator?rev=17abc2b05e8f89de935404510a447119c478e649#lint-public' -- {{ARGS}}
