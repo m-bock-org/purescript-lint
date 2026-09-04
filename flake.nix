@@ -90,11 +90,36 @@
           touch $out
         '';
 
-        checks.tests = pkgs.runCommand "lint-purs-tests" { } ''
+        # Run from a copy of the tree, not from the store alone. This
+        # suite is a linter's, so it reads the workspace it is pointed
+        # at: it shells out to `spago ls packages --json` and opens its
+        # own fixtures by relative path. Given only the compiled output
+        # it fails on a missing spago and a missing file - which it did,
+        # on main, for as long as CI ran `just check` inside a dev shell
+        # that happened to supply both.
+        checks.tests = pkgs.runCommand "lint-purs-tests"
+          {
+            nativeBuildInputs = [
+              lib.defaults.spago
+              lib.defaults.purs
+              pkgs.nodejs
+              pkgs.git
+              pkgs.jq
+            ];
+          } ''
+          cp -a ${self} src
+          chmod -R u+w src
+          cd src
+          cp -a ${workspace.dotSpago}/. .spago
+          chmod -R u+w .spago
+          export HOME="$TMPDIR/home"
+          mkdir -p "$HOME/.cache/spago-nodejs"
+          touch "$HOME/.cache/spago-nodejs/fresh-registry-canary.txt"
           ${lib.mkRunner {
             name = "spec";
             mainModule = "Test.Main";
             output = workspace.testOutput;
+            nodeModules = self.packages.${system}.nodeModules;
           }}/bin/spec
           touch $out
         '';
