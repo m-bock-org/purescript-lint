@@ -10,7 +10,7 @@ import Data.Foldable (fold, for_, sum)
 import Data.String.Common (joinWith, split) as String
 import Data.String.Pattern (Pattern(..))
 import Data.Maybe (Maybe(..))
-import Data.Maybe (isNothing) as Maybe
+import Data.Maybe (fromMaybe, isJust, isNothing) as Maybe
 import Data.Traversable (for)
 import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff)
@@ -39,7 +39,6 @@ import Lint.Internal.Rule
   )
 import Effect.Aff (error, throwError) as Aff
 import Control.Monad.Rec.Class (Step(..), tailRecM)
-import Data.Maybe (fromMaybe, isJust) as Maybe
 import Node.Encoding (Encoding(..))
 import Node.FS.Aff as FS
 import Lint.Fix (FixConfig)

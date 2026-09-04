@@ -240,7 +240,14 @@ pick:
 ```purescript
 runLinter :: Array Rule -> Aff Boolean
 runLinterWith :: LintOptions -> Array Rule -> Aff Boolean
-type LintOptions = { skipModules :: Array ModuleExemption }
+type LintOptions =
+  { skipModules :: Array ModuleExemption
+  , fix :: Maybe FixConfig
+  -- | Which exemptions this run honours. `All` for a person's run;
+  -- | `ByDesignOnly` for a fixer, which is the one caller that should
+  -- | see the pending backlog rather than have it suppressed.
+  , standing :: Exemptions.Standing
+  }
 ```
 
 <!-- PD_END -->

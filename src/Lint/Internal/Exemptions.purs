@@ -12,14 +12,12 @@ module Lint.Internal.Exemptions
 
 import Prelude
 
-import Data.Argonaut.Core (Json)
 import Data.Argonaut.Parser (jsonParser)
 import Data.Array (any, filter) as Array
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Data.Maybe (isJust, maybe) as Maybe
-import Data.String (Pattern(..)) as Str
-import Data.String (split, stripPrefix, stripSuffix) as Str
+import Data.String (Pattern(..), split, stripPrefix, stripSuffix) as Str
 import Effect.Aff (Aff)
 import Effect.Aff (attempt) as Aff
 import Data.Json.Decode
