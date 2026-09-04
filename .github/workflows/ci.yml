@@ -1,8 +1,14 @@
 # CI, on gaia.
 #
-# One job, one command. `just check` is the whole gate, so what a pull
-# request must pass is the same thing you run locally, with no second
-# list here to keep in step with the justfile.
+# One job, one command, and the command is nix. What a pull request must
+# pass is `nix flake check` - the same derivations, built the same way,
+# whether nix runs them here or on your machine. Nothing routes through
+# the justfile: a developer runner is allowed to be fast and stateful,
+# and neither is a property CI should depend on.
+#
+# This file is meant to be identical in every repository. If a repo
+# needs something else checked, that belongs in its flake as another
+# check, not as another step here.
 #
 # `runs-on: gaia` rather than a hosted runner, because gaia already has
 # the nix store this repository builds against and the key its private
@@ -34,7 +40,4 @@ jobs:
       # 3.8G, which is one purs and no second one. The lock is held for
       # the build, not the queue, so waiting costs a listener and not
       # memory.
-      #
-      # No `npm ci` and no setup step: the dev shell brings its own
-      # toolchain, so a fresh clone needs nothing prepared.
-      - run: flock -w 3600 /tmp/gaia-ci.lock nix develop . --command just check
+      - run: flock -w 3600 /tmp/gaia-ci.lock nix flake check -L

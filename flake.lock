@@ -7,11 +7,11 @@
         "purescript-overlay": "purescript-overlay"
       },
       "locked": {
-        "lastModified": 1788513665,
-        "narHash": "sha256-QyzIgfQKsWyIa/1TmunYoDtstB8IXfle5ZB34VwVUI8=",
+        "lastModified": 1788521443,
+        "narHash": "sha256-w2Stu71MGVqB4VVwy4R1gaKmt9jrGr1lWYMEq3dHpts=",
         "ref": "refs/heads/main",
-        "rev": "aa7e9a9d4d62ffe15cca65d9fa50293bfd953fdc",
-        "revCount": 35,
+        "rev": "9d82aa878332a5f7301c0ae76d13686982245a18",
+        "revCount": 39,
         "type": "git",
         "url": "ssh://git@github.com/m-bock-org/al-dente"
       },
