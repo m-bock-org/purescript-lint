@@ -90,7 +90,7 @@ noExemptions = []
 -- | Absent is fine and silent. Present but unreadable is not: a
 -- | mistyped exemption file that quietly exempted nothing would be
 -- | found by a rule firing somewhere nobody expected, months later.
--- | Uses `decodeExemptions`.
+-- | Uses `readExemptionsWith`.
 readExemptions :: Aff (Either String Exemptions)
 readExemptions = readExemptionsWith All
 
@@ -104,10 +104,12 @@ readExemptionsWith standing = do
     Right text -> pure (decodeExemptionsWith standing text)
 
 -- | The file's contents, decoded. Uses `decodeExemptionsWith`.
+-- | Uses `decodeExemptionsWith`.
 decodeExemptions :: String -> Either String Exemptions
 decodeExemptions = decodeExemptionsWith All
 
 -- | The file's contents, decoded, honouring one standing.
+-- | Private.
 decodeExemptionsWith :: Standing -> String -> Either String Exemptions
 decodeExemptionsWith standing text = case jsonParser text of
   Left err -> Left (exemptFile <> ": " <> err)

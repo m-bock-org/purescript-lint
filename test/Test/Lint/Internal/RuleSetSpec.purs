@@ -17,6 +17,7 @@ import Lint.Internal.RuleSet (flattenRules, group, rule)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
+-- | Private.
 noopModule :: ModuleLint Unit
 noopModule =
   { name: "noop-module"
@@ -25,6 +26,7 @@ noopModule =
   , rule: \_config _context _value -> violations []
   }
 
+-- | Private.
 noopDecl :: DeclarationLint Unit
 noopDecl =
   { name: "noop-decl"
@@ -33,6 +35,7 @@ noopDecl =
   , rule: \_config _context _value -> violations []
   }
 
+-- | Private.
 noopExpr :: ExprLint Unit
 noopExpr =
   { name: "noop-expr"

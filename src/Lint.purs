@@ -7,7 +7,7 @@ import Data.Array as Array
 import Data.Either (Either(..))
 import Data.Array.NonEmpty as NEA
 import Data.Foldable (fold, for_, sum)
-import Data.String.Common (joinWith, split) as String
+import Data.String.Common (joinWith, split) as Str
 import Data.String.Pattern (Pattern(..))
 import Data.Maybe (Maybe(..))
 import Data.Maybe (fromMaybe, isJust, isNothing) as Maybe
@@ -54,10 +54,11 @@ import Lint.Internal.Workspace as Workspace
 -- | reporting everything it finds. `true` when the workspace is clean.
 -- |
 -- | A rule that rewrites is applied: the module is written back.
+-- | Uses `runLinterWith`.
 runLinter :: Array Rule -> Aff Boolean
 runLinter = runLinterWith { skipModules: [], fix: Nothing, standing: Exemptions.All }
 
--- | `runLinter` with options. Uses `lintWorkspace`.
+-- | Uses `fixWorkspace`, `lintWorkspace`, `printByRule`, `printSummary`.
 runLinterWith :: LintOptions -> Array Rule -> Aff Boolean
 runLinterWith options rules = do
   case options.fix of
@@ -77,9 +78,9 @@ runLinterWith options rules = do
 -- | module's own printed output back in, and a tool that parses its own
 -- | prose has put the feature in the wrong place.
 -- |
--- | `total` counts survey findings too, which have no module and so
 -- | never appear in `located`. That is why it is reported rather than
 -- | derived from the array's length.
+-- | Uses `readOrFail`, `lintModule`, `reportSurvey`.
 lintWorkspace :: LintOptions -> Array Rule -> Aff LintReport
 lintWorkspace { skipModules, standing } rules = do
   exemptions <- readOrFail standing
@@ -110,11 +111,11 @@ lintWorkspace { skipModules, standing } rules = do
     , moduleCount
     }
 
--- | Private. Used only by `lintWorkspace`.
 -- |
 -- | Absent is fine and means no exemptions. Present but malformed is
 -- | not: a mistyped file that quietly exempted nothing would be found
 -- | by a rule firing somewhere nobody expected, months later.
+-- | Private. Used only by `lintWorkspace`.
 readOrFail :: Exemptions.Standing -> Aff Exemptions
 readOrFail standing = do
   found <- Exemptions.readExemptionsWith standing
@@ -205,12 +206,11 @@ attemptRound options fix rules before one was state = do
         pure (Loop { left: state.left - 1, broke: judged.broke })
       else pure (Done judged.outcome)
 
--- | Private, depth 5. Used only by `attemptRound`. Uses `lintWorkspace`, `same`,
--- | `describe`, `verified`.
 -- |
 -- | Two gates, cheapest first. The re-lint is a parse of the workspace;
--- | `fix.verify` is usually a compile, so it runs only for a proposal
 -- | that has already earned it.
+-- | Private, depth 5. Used only by `attemptRound`. Uses `lintWorkspace`, `same`, `newFindings`,
+-- | `describe`, `verified`.
 judge
   :: LintOptions
   -> Fix.FixConfig
@@ -243,28 +243,28 @@ judge options fix rules before one was text = do
         pure { outcome: Fix.Declined "it does not compile", broke: [ why ] }
       Right _ -> pure { outcome: Fix.Fixed, broke: [] }
 
--- | Private, depth 6. Used only by `judge`.
 -- |
 -- | No `verify` configured means nothing to fail, not nothing to run.
+-- | Private, depth 6. Used only by `judge`.
 verified :: Fix.FixConfig -> Aff (Either String Unit)
 verified fix = case fix.verify of
   Nothing -> pure (Right unit)
   Just check -> check
 
--- | Private, depth 6. Used only by `judge`. Uses `describe`.
 -- |
 -- | Names the rules rather than counting them. This line is what a
 -- | person reads to decide whether a proposal was close or nowhere
 -- | near, and two rules that answer each other show up here as a pair -
 -- | which a count hides.
+-- | Private, depth 6. Used only by `judge`. Uses `describe`.
 newFindings :: Array Located -> String
 newFindings started = case started of
   [ only ] -> "a new finding, " <> describe only
   _ ->
     show (Array.length started) <> " new findings: "
-      <> String.joinWith ", " (Array.nub (map (\a -> a.finding.rule.name) started))
+      <> Str.joinWith ", " (Array.nub (map (\a -> a.finding.rule.name) started))
 
--- | Private, depth 6. Used only by `judge`.
+-- | Private.
 describe :: Located -> String
 describe one = one.finding.rule.name <> ": " <> one.finding.message
 
@@ -275,6 +275,7 @@ same a b =
     && a.finding.rule.name == b.finding.rule.name
     && a.finding.message == b.finding.message
 
+-- | Private. Used only by `lintWorkspace`.
 reportSurvey :: Configured -> Array PackageSurvey -> Aff Int
 reportSurvey { flatRules, exemptions } surveys = do
   let
@@ -328,6 +329,7 @@ type Located = { moduleName :: String, path :: String, finding :: Finding }
 
 -- | Findings grouped by the rule that made them: what the rule wants,
 -- | then every place it was not met.
+-- | Private, depth 2. Used only by `runLinterWith`. Uses `labelled`.
 printByRule :: Array Located -> Aff Unit
 printByRule located =
   let
@@ -341,7 +343,7 @@ printByRule located =
         sharedHint = if Array.length hints == 1 then Array.head hints else Nothing
       log ""
       log
-        ( "● " <> String.joinWith " » "
+        ( "● " <> Str.joinWith " » "
             (Array.snoc (NEA.head group).finding.groups rule.name)
         )
       log ("    " <> rule.description)
@@ -359,14 +361,16 @@ printByRule located =
 
 -- | One example under its label, with anything after the first line
 -- | indented to sit under it.
+-- | Private, depth 3. Used only by `printByRule`.
 labelled :: String -> String -> Aff Unit
 labelled label text =
-  for_ (Array.mapWithIndex indent (String.split (Pattern "\n") text)) log
+  for_ (Array.mapWithIndex indent (Str.split (Pattern "\n") text)) log
   where
   indent 0 line = "      " <> label <> "  " <> line
   indent _ line = "            " <> line
 
 -- | The one-line total, after everything else.
+-- | Private, depth 2. Used only by `runLinterWith`.
 printSummary :: Int -> Int -> Int -> Aff Unit
 printSummary total withFindings moduleCount = do
   log ""
@@ -380,6 +384,8 @@ printSummary total withFindings moduleCount = do
     , " modules"
     ]
 
+-- | Private. Used only by `lintWorkspace`. Uses `moduleNameOf`, `importsOf`, `rewriteDecls`,
+-- | `lintExprsInDecl`.
 lintModule :: Configured -> String -> WorkspaceModule -> Aff ModuleScan
 lintModule { skipModules, flatRules, exemptions } packageName workspaceModule = do
   original <- Workspace.readModule workspaceModule
@@ -423,12 +429,14 @@ lintModule { skipModules, flatRules, exemptions } packageName workspaceModule = 
 type PerDeclaration =
   LintContext -> CST.Declaration Void -> RuleOutcome (CST.Declaration Void)
 
+-- | Private, depth 3. Used only by `rewriteDecls`.
 declarationNameOf :: CST.Declaration Void -> Maybe String
 declarationNameOf = case _ of
   CST.DeclValue { name: CST.Name { name: CST.Ident n } } -> Just n
   CST.DeclSignature (CST.Labeled { label: CST.Name { name: CST.Ident n } }) -> Just n
   _ -> Nothing
 
+-- | Private, depth 2. Used only by `lintModule`.
 moduleNameOf :: CST.Module Void -> String
 moduleNameOf (CST.Module { header: CST.ModuleHeader { name } }) =
   case name of
@@ -440,6 +448,7 @@ moduleNameOf (CST.Module { header: CST.ModuleHeader { name } }) =
 -- | questions worth asking about imports are about the *graph* - how
 -- | deep the chain under a module goes - and a rule handed one module at
 -- | a time can count its imports but never follow one.
+-- | Private, depth 2. Used only by `lintModule`.
 importsOf :: CST.Module Void -> Array String
 importsOf (CST.Module { header: CST.ModuleHeader { imports } }) =
   map
@@ -447,6 +456,7 @@ importsOf (CST.Module { header: CST.ModuleHeader { imports } }) =
     )
     imports
 
+-- | Private, depth 2. Used only by `lintModule`. Uses `declarationNameOf`.
 rewriteDecls :: LintContext -> CST.Module Void -> PerDeclaration -> RuleOutcome (CST.Module Void)
 rewriteDecls context (CST.Module moduleFields) perDeclaration =
   let
@@ -463,6 +473,7 @@ rewriteDecls context (CST.Module moduleFields) perDeclaration =
 
 type ExprLintState = { violations :: Array Finding, fixed :: Boolean }
 
+-- | Private, depth 2. Used only by `lintModule`.
 lintExprsInDecl
   :: Exemptions
   -> Array (Grouped ExprRule)
