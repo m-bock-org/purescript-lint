@@ -1,36 +1,40 @@
-name: CI
+# CI, on gaia.
+#
+# One job, one command. `just check` is the whole gate, so what a pull
+# request must pass is the same thing you run locally, with no second
+# list here to keep in step with the justfile.
+#
+# `runs-on: gaia` rather than a hosted runner, because gaia already has
+# the nix store this repository builds against and the key its private
+# flake inputs are fetched with. A hosted runner has neither: it spent
+# every run compiling the package set from source, several hundred
+# modules, before reaching the first line of this repository's code.
+name: check
 
 on:
+  pull_request:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
+
+# A second push to the same branch cancels the first. CI here is a
+# minute of a machine that has other jobs, not an unbounded queue.
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-
+  check:
+    runs-on: [ self-hosted, gaia ]
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        # spago 1.0.4 reads its package index through node:sqlite
-        node-version: '24'
-        cache: 'npm'
-
-    - name: Install dependencies
-      run: npm ci
-
-    - name: Build
-      run: npx spago build --strict
-
-    - name: Test
-      run: npx spago test
-
-    - name: Check the README is in sync with the source
-      run: |
-        cp README.md /tmp/README.before
-        PATCHDOWN_FILE_PATH="./README.md" npx spago run -m Patchdown
-        diff -u /tmp/README.before README.md
+      # One repository builds at a time across all of them. GitHub's
+      # `concurrency` is per-repository, so without this the machine
+      # can take a compile from every repository at once - and it has
+      # 3.8G, which is one purs and no second one. The lock is held for
+      # the build, not the queue, so waiting costs a listener and not
+      # memory.
+      #
+      # No `npm ci` and no setup step: the dev shell brings its own
+      # toolchain, so a fresh clone needs nothing prepared.
+      - run: flock -w 3600 /tmp/gaia-ci.lock nix develop . --command just check
