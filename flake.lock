@@ -7,17 +7,51 @@
         "purescript-overlay": "purescript-overlay"
       },
       "locked": {
-        "lastModified": 1788521443,
-        "narHash": "sha256-w2Stu71MGVqB4VVwy4R1gaKmt9jrGr1lWYMEq3dHpts=",
+        "lastModified": 1788626317,
+        "narHash": "sha256-XBBD1wHqVah9dGgecXOT68WpTxIE6jwvseA/0rbnxqM=",
         "ref": "refs/heads/main",
-        "rev": "9d82aa878332a5f7301c0ae76d13686982245a18",
-        "revCount": 39,
+        "rev": "5e83437ff5239e2ee7f51bf913e88bc781cf6a00",
+        "revCount": 49,
         "type": "git",
         "url": "ssh://git@github.com/m-bock-org/al-dente"
       },
       "original": {
         "type": "git",
         "url": "ssh://git@github.com/m-bock-org/al-dente"
+      }
+    },
+    "codec-argonaut": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1744693349,
+        "narHash": "sha256-UzwolQvkQK7q5bN/N0rQxojcWTgrBv9hnuAG4OLe7gc=",
+        "owner": "garyb",
+        "repo": "purescript-codec-argonaut",
+        "rev": "dc287c83b79f86f8d9a0045dcb740f0cf9d23ccd",
+        "type": "github"
+      },
+      "original": {
+        "owner": "garyb",
+        "repo": "purescript-codec-argonaut",
+        "rev": "dc287c83b79f86f8d9a0045dcb740f0cf9d23ccd",
+        "type": "github"
+      }
+    },
+    "encode-decode": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788114296,
+        "narHash": "sha256-x3E4CN2IM7JA/yuTGnKlrGtymBSV055Cbz5ZFo1twjY=",
+        "owner": "m-bock",
+        "repo": "purescript-encode-decode",
+        "rev": "07a361b0e42314ee6521b8ccc774eca117be57d0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "m-bock",
+        "repo": "purescript-encode-decode",
+        "rev": "07a361b0e42314ee6521b8ccc774eca117be57d0",
+        "type": "github"
       }
     },
     "flake-compat": {
@@ -104,6 +138,23 @@
         "type": "github"
       }
     },
+    "patchdown": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1745416943,
+        "narHash": "sha256-k9i03Sv5EGtjEZVZMoBD7iJEgpc7nDZvcxMOgCiEltg=",
+        "owner": "m-bock",
+        "repo": "purescript-patchdown",
+        "rev": "7012c7a839d7c2f8e9d1a8acf9a56d9435eaccc4",
+        "type": "github"
+      },
+      "original": {
+        "owner": "m-bock",
+        "repo": "purescript-patchdown",
+        "rev": "7012c7a839d7c2f8e9d1a8acf9a56d9435eaccc4",
+        "type": "github"
+      }
+    },
     "purescript-overlay": {
       "inputs": {
         "flake-compat": "flake-compat",
@@ -129,8 +180,11 @@
     "root": {
       "inputs": {
         "al-dente": "al-dente",
+        "codec-argonaut": "codec-argonaut",
+        "encode-decode": "encode-decode",
         "flake-utils": "flake-utils_2",
-        "nixpkgs": "nixpkgs_2"
+        "nixpkgs": "nixpkgs_2",
+        "patchdown": "patchdown"
       }
     },
     "systems": {

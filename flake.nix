@@ -5,9 +5,17 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     al-dente.url = "git+ssh://git@github.com/m-bock-org/al-dente";
+
+    # Generated from spago.lock by `just inputs-sync` - every git
+    # dependency needs one, because evaluation does not fetch.
+    # al-dente:git-inputs:begin
+    "codec-argonaut" = { url = "github:garyb/purescript-codec-argonaut/dc287c83b79f86f8d9a0045dcb740f0cf9d23ccd"; flake = false; };
+    "encode-decode" = { url = "github:m-bock/purescript-encode-decode/07a361b0e42314ee6521b8ccc774eca117be57d0"; flake = false; };
+    "patchdown" = { url = "github:m-bock/purescript-patchdown/7012c7a839d7c2f8e9d1a8acf9a56d9435eaccc4"; flake = false; };
+    # al-dente:git-inputs:end
   };
 
-  outputs = { self, nixpkgs, flake-utils, al-dente, ... }:
+  outputs = inputs@{ self, nixpkgs, flake-utils, al-dente, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -21,6 +29,13 @@
         workspace = lib.mkWorkspace {
           src = ./.;
           name = "lint-purs";
+          gitPaths = {
+            # al-dente:git-paths:begin
+            "codec-argonaut" = inputs."codec-argonaut";
+            "encode-decode" = inputs."encode-decode";
+            "patchdown" = inputs."patchdown";
+            # al-dente:git-paths:end
+          };
         };
       in
       {
@@ -69,6 +84,10 @@
         # 541-module rebuild, and it is the granularity this workspace
         # is built to have.
         packages.restoreOutput = lib.mkRestore { output = workspace.testOutput; };
+
+        # Writes this flake's git inputs from spago.lock, so the
+        # revision is recorded once rather than in two files.
+        packages.syncFlakeInputs = lib.syncInputs;
 
         # The README is generated from the sources it documents, so it
         # can go stale silently. This regenerates it and diffs against

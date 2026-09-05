@@ -34,7 +34,38 @@ docs-check:
     PATCHDOWN_FILE_PATH="./README.md" spago run -m Patchdown >/dev/null
     diff -u "$before" README.md
 
-check: test docs-check
+# Every git dependency in spago.lock needs a flake input, because nix
+# evaluation is pure and does not fetch. These generate the one from the
+# other, so the revision is recorded once instead of in two files that
+# drift.
+inputs-check:
+    nix run .#syncFlakeInputs -- --check
+
+inputs-sync:
+    nix run .#syncFlakeInputs
+
+# Evaluation is meant to be pure and cheap. When it is not, it is
+# because something is fetching - which is the failure this whole
+# arrangement exists to prevent, and it is silent otherwise.
+eval-time:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    budget=10
+    start=$(date +%s%N)
+    nix eval --raw \
+      .#checks.x86_64-linux \
+      --apply 'c: builtins.concatStringsSep " " (map (n: c.${n}.drvPath) (builtins.attrNames c))' \
+      > /dev/null
+    took=$(( ($(date +%s%N) - start) / 1000000 ))
+    echo "nix evaluation: ${took}ms"
+    if [ "$took" -gt $(( budget * 1000 )) ]; then
+      echo "OVER BUDGET: evaluation took ${took}ms, over ${budget}s." >&2
+      echo "Something is doing work there - most likely fetching." >&2
+      echo "See al-dente lib/fetch.nix." >&2
+      exit 1
+    fi
+
+check: inputs-check test docs-check
 
 # Restore output/ from the Nix build rather than compiling it here. A
 # copy, not symlinks: purs writes into output/<Module>/ in place, and a
