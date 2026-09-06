@@ -384,8 +384,8 @@ printSummary total withFindings moduleCount = do
     , " modules"
     ]
 
--- | Private. Used only by `lintWorkspace`. Uses `moduleNameOf`, `importsOf`, `rewriteDecls`,
--- | `lintExprsInDecl`.
+-- | Private. Used only by `lintWorkspace`. Uses `moduleNameOf`, `importsOf`, `headerOf`,
+-- | `rewriteDecls`, `lintExprsInDecl`.
 lintModule :: Configured -> String -> WorkspaceModule -> Aff ModuleScan
 lintModule { skipModules, flatRules, exemptions } packageName workspaceModule = do
   original <- Workspace.readModule workspaceModule
@@ -403,6 +403,7 @@ lintModule { skipModules, flatRules, exemptions } packageName workspaceModule = 
       , path: context.path
       , kind: context.kind
       , imports: importsOf original
+      , header: headerOf original
       }
   if Array.any (\g -> g.appliesTo context) skipModules then
     pure { surveyed, violations: 0, located: [] }
@@ -435,6 +436,10 @@ declarationNameOf = case _ of
   CST.DeclValue { name: CST.Name { name: CST.Ident n } } -> Just n
   CST.DeclSignature (CST.Labeled { label: CST.Name { name: CST.Ident n } }) -> Just n
   _ -> Nothing
+
+-- | Private, depth 2. Used only by `lintModule`.
+headerOf :: CST.Module Void -> CST.ModuleHeader Void
+headerOf (CST.Module { header }) = header
 
 -- | Private, depth 2. Used only by `lintModule`.
 moduleNameOf :: CST.Module Void -> String

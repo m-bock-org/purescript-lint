@@ -26,25 +26,35 @@ module Lint.Internal.Survey
 import Prelude
 
 import Data.Array (any, concatMap, filter) as Array
-import Node.Path (FilePath)
 import Data.Maybe (Maybe(..))
 import Lint.Internal.Exemptions (Exemptions)
 import Lint.Internal.Exemptions as Exemptions
 import Lint.Internal.Rule (class RuleOptions, Examples, Grouped, ModuleKind)
+import Node.Path (FilePath)
+import PureScript.CST.Types (ModuleHeader) as CST
 
--- | One module, as a survey sees it: where it is, not what is in it.
+-- | One module, as a survey sees it: where it is and what crosses its
+-- | boundary, not what is in it.
+-- |
+-- | `imports` is the names alone, for the rules about the graph.
+-- | `header` is the whole of it - the export list and each import's
+-- | name list - for a rule about what a module offers and what its
+-- | importers actually take.
 type SurveyModule =
   { moduleName :: String
   , path :: FilePath
   , kind :: ModuleKind
   , imports :: Array String
+  , header :: CST.ModuleHeader Void
   }
 
--- | What a survey rule is complaining about.
+-- | What a survey rule is complaining about. `Declaration` is one
+-- | named thing in a module, which is what an export is.
 data Subject
   = Namespace String
   | Package String
   | Module String
+  | Declaration String String
 
 derive instance eqSubject :: Eq Subject
 
@@ -53,6 +63,7 @@ instance showSubject :: Show Subject where
     Namespace n -> n
     Package n -> n
     Module n -> n
+    Declaration m d -> m <> "#" <> d
 
 -- | One finding, and what it is about.
 type SurveyFinding = { subject :: Subject, message :: String }
@@ -142,7 +153,7 @@ instance HasSubjectIgnore WorkspaceRule where
 -- | Attaching exemptions to a survey rule.
 class HasSubjectIgnore r where
   -- | Give a survey rule reasons to drop findings about particular
--- | subjects, after it has made them.
+  -- | subjects, after it has made them.
   ignoreSubjects :: Array SubjectExemption -> r -> r
 
 -- | What the runner needs of a survey rule, at either scope.
@@ -195,15 +206,16 @@ kept r finding = not (Array.any (\ex -> ex.appliesTo finding.subject) (surveyExc
 -- | module, package or namespace rather than about a place in a file -
 -- | which is why they are filtered after the rule has looked rather
 -- | than skipped before it. The file matches on the subject's name, so
--- | a module named there is exempt whichever kind of rule found it.
--- | Private. Used only by `runSurveyRules`. Uses `subjectName`.
+-- | a module named there is exempt whichever kind of rule found it,
+-- | and a finding about one declaration answers to `Module#name` too.
+-- | Private. Used only by `runSurveyRules`. Uses `subjectName`, `subjectDeclaration`.
 notExempt :: ∀ r s. SurveyLike r s => Exemptions -> r -> SurveyFinding -> Boolean
 notExempt exemptions r finding = not
   ( Exemptions.matches exemptions
       { rule: surveyName r
       , moduleName: subjectName finding.subject
       , path: ""
-      , declarationName: Nothing
+      , declarationName: subjectDeclaration finding.subject
       }
   )
 
@@ -213,3 +225,10 @@ subjectName = case _ of
   Namespace name -> name
   Package name -> name
   Module name -> name
+  Declaration name _ -> name
+
+-- | Private, depth 2. Used only by `notExempt`.
+subjectDeclaration :: Subject -> Maybe String
+subjectDeclaration = case _ of
+  Declaration _ name -> Just name
+  _ -> Nothing
