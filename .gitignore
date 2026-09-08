@@ -5,3 +5,8 @@ generated-docs/
 .spec-results
 .vscode/.toolchain
 .direnv/
+
+# What a build leaves behind. The spago wrapper writes its timings into
+# whatever directory it runs in, and a nightly `git add -A` put forty-
+# four lines of them in the middle of a proposal about a lint rule.
+.tmp-*/
