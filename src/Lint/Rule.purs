@@ -6,6 +6,7 @@
 -- | the smallest one that can see the answer.
 module Lint.Rule (module Exports) where
 
+import Lint.Internal.Dedent (dedent) as Exports
 import Lint.Internal.Rule
   ( class HasExclude
   , class RuleOptions
@@ -33,5 +34,3 @@ import Lint.Internal.Rule
   , violations
   , withHint
   ) as Exports
-
-import Lint.Internal.Dedent (dedent) as Exports

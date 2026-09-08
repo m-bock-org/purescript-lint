@@ -8,8 +8,8 @@ module Lint.Internal.RuleSet
   ) where
 
 import Data.Array (foldl, snoc) as Array
-import Lint.Internal.Survey (PackageRule, WorkspaceRule)
 import Lint.Internal.Rule (DeclarationRule, ExprRule, Grouped, ModuleRule)
+import Lint.Internal.Survey (PackageRule, WorkspaceRule)
 
 -- | One entry in a rule set. Build one with `rule` or `group`.
 data Rule

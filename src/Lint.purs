@@ -2,25 +2,46 @@ module Lint (LintOptions, LintReport, Located, lintWorkspace, runLinter, runLint
 
 import Prelude
 
+import Control.Monad.Rec.Class (Step(..), tailRecM)
 import Control.Monad.State (State, modify_, runState)
 import Data.Array as Array
-import Data.Either (Either(..))
 import Data.Array.NonEmpty as NEA
+import Data.Either (Either(..))
 import Data.Foldable (fold, for_, sum)
-import Data.String.Common (joinWith, split) as Str
-import Data.String.Pattern (Pattern(..))
 import Data.Maybe (Maybe(..))
 import Data.Maybe (fromMaybe, isJust, isNothing) as Maybe
+import Data.String.Common (joinWith, split) as Str
+import Data.String.Pattern (Pattern(..))
 import Data.Traversable (for)
 import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff)
+import Effect.Aff (error, throwError) as Aff
 import Effect.Class.Console (log)
+import Lint.Fix (FixConfig)
+import Lint.Fix as Fix
+import Lint.Internal.Exemptions (Exemptions)
+import Lint.Internal.Exemptions as Exemptions
+import Lint.Internal.Rule
+  ( ExprRule
+  , Finding
+  , Grouped
+  , LintContext
+  , ModuleExemption
+  , RuleOutcome
+  , runRules
+  )
+import Lint.Internal.RuleSet (FlatRules, Rule, flattenRules)
+import Lint.Internal.Survey (PackageSurvey, SurveyModule, runSurveyRules)
+import Lint.Internal.Workspace (WorkspaceModule)
+import Lint.Internal.Workspace as Workspace
+import Node.Encoding (Encoding(..))
+import Node.FS.Aff as FS
 import PureScript.CST.Traversal (defaultVisitorM, rewriteDeclBottomUpM)
 import PureScript.CST.Types
   ( Declaration(..)
-  , ImportDecl(..)
   , Expr
   , Ident(..)
+  , ImportDecl(..)
   , Labeled(..)
   , Module(..)
   , ModuleBody(..)
@@ -28,27 +49,6 @@ import PureScript.CST.Types
   , ModuleName(..)
   , Name(..)
   ) as CST
-import Lint.Internal.Rule
-  ( ExprRule
-  , Grouped
-  , Finding
-  , LintContext
-  , ModuleExemption
-  , RuleOutcome
-  , runRules
-  )
-import Effect.Aff (error, throwError) as Aff
-import Control.Monad.Rec.Class (Step(..), tailRecM)
-import Node.Encoding (Encoding(..))
-import Node.FS.Aff as FS
-import Lint.Fix (FixConfig)
-import Lint.Fix as Fix
-import Lint.Internal.Exemptions (Exemptions)
-import Lint.Internal.Exemptions as Exemptions
-import Lint.Internal.RuleSet (FlatRules, Rule, flattenRules)
-import Lint.Internal.Survey (PackageSurvey, SurveyModule, runSurveyRules)
-import Lint.Internal.Workspace (WorkspaceModule)
-import Lint.Internal.Workspace as Workspace
 
 -- | Run a rule set over the Spago workspace in the current directory,
 -- | reporting everything it finds. `true` when the workspace is clean.
