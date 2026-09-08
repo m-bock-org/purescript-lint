@@ -18,6 +18,8 @@ import Data.Set as Set
 import Data.Traversable (traverse)
 import Effect.Aff (Aff)
 import Effect.Aff (error, throwError) as Aff
+import Lint.Internal.Rule (ModuleKind(..))
+import Lint.Internal.Spago (SpagoPkg(..), SpagoWorkspacePackage, spagoLsPackages)
 import Node.Encoding (Encoding(..))
 import Node.FS.Aff as FS
 import Node.Glob.Basic (expandGlobs)
@@ -27,8 +29,6 @@ import PureScript.CST (RecoveredParserResult(..), parseModule, printModule) as C
 import PureScript.CST.Errors (printParseError)
 import PureScript.CST.Parser.Monad (PositionedError)
 import PureScript.CST.Types (Module) as CST
-import Lint.Internal.Rule (ModuleKind(..))
-import Lint.Internal.Spago (SpagoPkg(..), SpagoWorkspacePackage, spagoLsPackages)
 
 -- | Every package this repo owns, as a structural map. Cheap to hold
 -- | whole; a module's CST is read separately when something needs it.

@@ -314,11 +314,12 @@ ruleInfoOf lint =
 type RuleInfo =
   { name :: String
   , description :: String
-  , examples :: Maybe
-      { config :: Maybe String
-      , good :: Array String
-      , bad :: Array String
-      }
+  , examples ::
+      Maybe
+        { config :: Maybe String
+        , good :: Array String
+        , bad :: Array String
+        }
   }
 
 -- | A rule, and the groups it was written under.
