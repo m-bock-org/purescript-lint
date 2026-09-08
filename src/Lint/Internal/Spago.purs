@@ -11,11 +11,11 @@ import Data.Either (Either(..))
 import Data.Either (either, hush) as Either
 import Data.Json.Decode
   ( DecodeJson
+  , JsonDecodeError
   , decodeArray
   , decodeAttempt
   , decodeObjectWithKey
   , decodeString
-  , JsonDecodeError
   , printJsonDecodeError
   , runDecodeFromString
   )
