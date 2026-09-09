@@ -31,7 +31,6 @@ import Lint.Internal.Rule
   , runRules
   )
 import Lint.Internal.RuleSet (FlatRules, Rule, flattenRules)
-import Lint.Internal.Exposed as Exposed
 import Lint.Internal.Survey (PackageSurvey, SurveyModule, runSurveyRules)
 import Lint.Internal.Workspace (WorkspaceModule)
 import Lint.Internal.Workspace as Workspace
@@ -92,13 +91,11 @@ lintWorkspace { skipModules, standing } rules = do
     moduleCount = Array.length (Array.concatMap _.modules workspace.packages)
   scanned <- for workspace.packages \pkg -> do
     perModule <- for pkg.modules (lintModule configured pkg.name)
-    exposes <- orFail (Exposed.readExposed pkg.path)
     let
       survey =
         { packageName: pkg.name
         , packagePath: pkg.path
         , dependencies: pkg.dependencies
-        , exposes
         , modules: map _.surveyed perModule
         }
     pure
@@ -125,16 +122,6 @@ readOrFail standing = do
   case found of
     Left why -> Aff.throwError (Aff.error why)
     Right exemptions -> pure exemptions
-
--- | Private. Used only by `lintWorkspace`. The same rule for anything
--- | read from a file beside the sources: absent is silent, unreadable
--- | stops the run.
-orFail :: ∀ a. Aff (Either String a) -> Aff a
-orFail read = do
-  found <- read
-  case found of
-    Left why -> Aff.throwError (Aff.error why)
-    Right value -> pure value
 
 -- |
 -- | Ask for a fix for each finding that has guidance, and keep the ones

@@ -77,19 +77,15 @@ type SubjectExemption = { name :: String, appliesTo :: Subject -> Boolean }
 
 -- | One package's modules, for a rule that reasons about a package.
 -- |
--- | `exposes` is what the package said it offers, from `package.yaml`
--- | beside its manifest. `Nothing` is a package that has not said,
--- | which a rule must be able to tell from a package that says it
--- | offers nothing.
 type PackageSurvey =
   { packageName :: String
   , packagePath :: FilePath
   , dependencies :: Array String
-  , exposes :: Maybe (Array String)
   , modules :: Array SurveyModule
   }
 
 -- | Every package, for a rule that reasons across package boundaries.
+-- |
 type WorkspaceSurvey = { packages :: Array PackageSurvey }
 
 -- | A rule that sees one package's layout.
