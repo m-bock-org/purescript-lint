@@ -2,6 +2,7 @@
 # and stands; `backlog` is work nobody has done yet, which is what
 # a fixer is for and what a nightly may take.
 exemptions:
+
   - rule: facade-layout
     modules:
       - Lint.Rule.Survey
@@ -13,6 +14,7 @@ exemptions:
       beside it, and Lint.RuleSet.Do is the do-notation for
       Lint.RuleSet. Moving either under .Internal would hide something
       callers are meant to import.
+
   - rule: encode-decode-signature
     modules:
       - Lint.Internal.Exemptions
@@ -22,6 +24,7 @@ exemptions:
       Decoders named for what they decode - decodeSpagoPkg, decodeExempt
       - which already have the DecodeJson shape the rule wants. The rule
       is matching on the name.
+
   - rule: no-duplicate-record-shape
     modules:
       - Lint.Internal.Exemptions
@@ -32,6 +35,7 @@ exemptions:
       The exemption subject record is spelled out in the matcher and
       again in its specs. Naming it would put a type in the public
       interface that exists only to be matched against.
+
   - rule: combinator-atoms
     modules:
       - Lint.Internal.Exemptions
@@ -44,6 +48,7 @@ exemptions:
       UNREVIEWED RULE. Added 2026-09-02 and registered Unreviewed.
       Whether it earns its place is undecided, and holding this
       repository to it before that decision is backwards.
+
   - rule: combinator-one-line
     modules:
       - Lint.Internal.Exemptions
@@ -52,6 +57,7 @@ exemptions:
     why: >
       UNREVIEWED. The weaker half of combinator-atoms; the same decision
       is pending.
+
   - rule: case-arm-layout
     modules:
       - Lint.Internal.Exemptions
@@ -62,6 +68,7 @@ exemptions:
       UNREVIEWED RULE. Added 2026-09-02. The findings are real - the
       arms genuinely disagree - but the rule has not been reviewed and
       this repository should not be the first thing held to it.
+
   - rule: comment-policy
     modules:
       - Lint.Internal.Exemptions
@@ -73,6 +80,7 @@ exemptions:
       convention is this workspace's and a stranger never agreed to it.
       The prose belongs in doc comments on the declarations it
       describes.
+
   - rule: single-line-signature
     modules:
       - Lint
@@ -84,6 +92,7 @@ exemptions:
     why: >
       Signatures with several constrained type variables that do not fit
       on one line. The fix is usually a named type alias.
+
   - rule: max-delimiter-run
     modules:
       - Lint
@@ -94,6 +103,7 @@ exemptions:
     why: >
       Nested brackets past the limit, mostly record literals and test
       fixtures.
+
   - rule: max-line-length
     modules:
       - Lint.Internal.Exemptions
@@ -101,11 +111,13 @@ exemptions:
       - Test.Lint.ReadmeExampleSpec
     kind: backlog
     why: no reason was recorded for this one
+
   - rule: same-constructor-arm
     modules:
       - Lint.Internal.Exemptions
     kind: backlog
     why: no reason was recorded for this one
+
   - rule: no-same-kind-block-nesting
     modules:
       - Lint.Internal.Exemptions
@@ -113,6 +125,7 @@ exemptions:
     kind: backlog
     why: >
       A case inside a case in the module matcher.
+
   - rule: no-bare-either-hush
     modules:
       - Lint.Internal.Spago
@@ -121,6 +134,7 @@ exemptions:
       One bare hush dropping a decode error from spago ls packages. It
       wants hushBecause and a written reason - a one-line fix nobody has
       made.
+
   - rule: no-where-clauses
     modules:
       - Lint
@@ -128,12 +142,14 @@ exemptions:
     kind: backlog
     why: >
       Two where clauses predating the rule.
+
   - rule: hoistable-local
     modules:
       - Lint
       - Lint.Internal.Rule
     kind: backlog
     why: no reason was recorded for this one
+
   - rule: max-function-arity
     modules:
       - Lint
@@ -142,6 +158,7 @@ exemptions:
     why: >
       Two functions past the limit; both want their arguments grouped
       into a record.
+
   - rule: max-call-stack-depth
     modules:
       - Lint
@@ -149,6 +166,7 @@ exemptions:
     why: >
       The fix loop threads options, rules and exemptions through four
       frames. Worth restructuring.
+
   - rule: max-operator-chain
     modules:
       - Lint
@@ -156,12 +174,14 @@ exemptions:
     kind: backlog
     why: >
       Two chains past the limit, both in string building.
+
   - rule: no-stuttering-name
     modules:
       - Lint
     kind: backlog
     why: >
       One name repeating its module.
+
   - rule: constant-escape-arm
     modules:
       - Lint
@@ -170,6 +190,7 @@ exemptions:
       UNREVIEWED PAIR. The counterweight to combinator-atoms, which is
       itself unreviewed; adopting one without the other pushes code in a
       direction the other pushes back from.
+
   - rule: comment-policy
     modules:
       - Test.Lint.FixSpec
@@ -178,12 +199,14 @@ exemptions:
       A spec whose prose sits in trailing blocks. Specs are read by
       whoever changes them, and this one earns its explanation - it took
       four attempts to become a test that could fail.
+
   - rule: max-do-nesting-depth
     modules:
       - Test.Lint.FixSpec
     kind: backlog
     why: >
       Nested do blocks in the stubbed proposers.
+
   - rule: no-pure-failure
     modules:
       - Test.Lint.FixSpec
@@ -191,11 +214,13 @@ exemptions:
     why: >
       A spec's stub proposer returns `Left` to mean declining, which is
       the answer under test rather than a failure being swallowed.
+
   - rule: no-stuttering-name
     modules:
       - Test.Lint.FixSpec
     kind: backlog
     why: no reason was recorded for this one
+
   - rule: constant-escape-arm
     modules:
       - Test.Lint.FixSpec
