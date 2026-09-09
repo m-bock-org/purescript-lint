@@ -15,7 +15,7 @@ import Effect.Aff (Aff)
 import Effect.Aff (attempt) as Aff
 import Lint (lintWorkspace)
 import Lint.Internal.Exemptions as Exemptions
-import Lint.Internal.Exemptions (exemptFile, matches)
+import Lint.Internal.Exemptions (Exemptions, Kind(..), exemptFile, matches)
 import Lint.Rule (perDecl)
 import Lint.RuleSet (Rule)
 import Lint.RuleSet as RuleSet
@@ -32,34 +32,22 @@ spec = do
     it "silences a rule where it says to" do
       without <- withoutExemptions countFindings
       with <- withExemptions silencing countFindings
-      -- Fewer, not zero: the exemption names one rule in one
-      -- namespace, so everything outside it must still be found.
       (with < without) `shouldEqual` true
       (with > 0) `shouldEqual` true
 
     it "suppresses a pending entry for an ordinary run" do
       without <- withoutExemptions countFindings
       with <- withExemptions pendingOnly countFindings
-      -- Pending is still an exemption to everyone but the fixer: a
-      -- backlog somebody else wrote must not fail the build of the
-      -- person editing an unrelated module.
       (with < without) `shouldEqual` true
 
     it "but shows it to a run that honours by-design only" do
       suppressed <- withExemptions pendingOnly countFindings
       exposed <- withExemptions pendingOnly countFindingsForFixer
-      -- The same file, read two ways. This is what lets the nightly
-      -- fixer see the backlog it is meant to work through while every
-      -- other run stays green.
       (exposed > suppressed) `shouldEqual` true
 
     it "and an absent file exempts nothing" do
       with <- withExemptions silencing countFindings
       without <- withoutExemptions countFindings
-      -- The same exemption, and then no file at all. Taking the file
-      -- away has to bring the findings back, or this suite would pass
-      -- against a linter that never read it. The old version of this
-      -- compared one count to itself and asserted nothing.
       (without > with) `shouldEqual` true
 
   describe "matching" do
@@ -78,12 +66,12 @@ spec = do
         `shouldEqual` true
 
 -- | Private.
-sample :: Array { modules :: Array String, paths :: Array String, rule :: String, why :: String }
-sample = [ { rule: "*", modules: [ "A.*" ], paths: [], why: "because" } ]
+sample :: Exemptions
+sample = [ { rule: "*", modules: [ "A.*" ], paths: [], kind: Backlog, why: "because" } ]
 
 -- | Private.
-byPath :: Array { modules :: Array String, paths :: Array String, rule :: String, why :: String }
-byPath = [ { rule: "*", modules: [], paths: [ "Scratch.purs" ], why: "because" } ]
+byPath :: Exemptions
+byPath = [ { rule: "*", modules: [], paths: [ "Scratch.purs" ], kind: Backlog, why: "because" } ]
 
 -- | Private. Uses `inInternal`.
 countFindings :: Aff Int
@@ -99,13 +87,12 @@ inInternal _ = true
 silencing :: String
 silencing =
   """
-  { "exempt":
-    [ { "rule": "max-function-arity"
-      , "modules": ["Lint.Internal.*"]
-      , "why": "proving the file is read"
-      }
-    ]
-  }
+  exemptions:
+    - rule: max-function-arity
+      modules:
+        - Lint.Internal.*
+      kind: by-design
+      why: proving the file is read
   """
 
 -- | Private. Used only by `spec`. Uses `restoring`.
@@ -119,13 +106,12 @@ withExemptions text action = restoring do
 pendingOnly :: String
 pendingOnly =
   """
-  { "pending":
-    [ { "rule": "max-function-arity"
-      , "modules": ["Lint.Internal.*"]
-      , "why": "proving the pending list is read"
-      }
-    ]
-  }
+  exemptions:
+    - rule: max-function-arity
+      modules:
+        - Lint.Internal.*
+      kind: backlog
+      why: proving a backlog entry is read
   """
 
 -- | Private. Uses `inInternal`.
@@ -166,3 +152,17 @@ restoring action = do
 -- | Private.
 rules :: Array Rule
 rules = [ RuleSet.rule (perDecl maxFunctionArity 0) ]
+--
+-- `spec`
+-- Fewer, not zero: the exemption names one rule in one
+-- namespace, so everything outside it must still be found.
+-- Pending is still an exemption to everyone but the fixer: a
+-- backlog somebody else wrote must not fail the build of the
+-- person editing an unrelated module.
+-- The same file, read two ways. This is what lets the nightly
+-- fixer see the backlog it is meant to work through while every
+-- other run stays green.
+-- The same exemption, and then no file at all. Taking the file
+-- away has to bring the findings back, or this suite would pass
+-- against a linter that never read it. The old version of this
+-- compared one count to itself and asserted nothing.

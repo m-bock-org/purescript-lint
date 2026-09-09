@@ -1,6 +1,7 @@
 module Lint.Internal.Exemptions
   ( Exempt
   , Exemptions
+  , Kind(..)
   , Standing(..)
   , decodeExemptions
   , exemptFile
@@ -12,12 +13,13 @@ module Lint.Internal.Exemptions
 
 import Prelude
 
-import Data.Argonaut.Parser (jsonParser)
 import Data.Array (any, filter) as Array
 import Data.Either (Either(..))
 import Data.Json.Decode
   ( DecodeJson
+  , JsonDecodeError(..)
   , decodeArray
+  , decodeRefine
   , decodeString
   , printJsonDecodeError
   , runDecode
@@ -28,6 +30,7 @@ import Data.Maybe (isJust, maybe) as Maybe
 import Data.String (Pattern(..), split, stripPrefix, stripSuffix) as Str
 import Effect.Aff (Aff)
 import Effect.Aff (attempt) as Aff
+import Lint.Internal.Yaml as Yaml
 import Node.Encoding (Encoding(..))
 import Node.FS.Aff as FS
 
@@ -48,8 +51,25 @@ type Exempt =
   { rule :: String
   , modules :: Array String
   , paths :: Array String
+  , kind :: Kind
   , why :: String
   }
+
+-- | Whether this is a decision or a debt.
+-- |
+-- | `ByDesign` is a rule that does not apply here and never will, and
+-- | a robot must not undo it. `Backlog` is work nobody has done yet,
+-- | which is what a fixer is for.
+-- |
+-- | Its own field rather than two lists or a word shouted at the front
+-- | of the reason. `BACKLOG (31 findings):` was both: a field written
+-- | as prose, carrying a count that is wrong the moment anybody fixes
+-- | one of them.
+data Kind
+  = ByDesign
+  | Backlog
+
+derive instance Eq Kind
 
 type Exemptions = Array Exempt
 
@@ -78,7 +98,13 @@ derive instance Eq Standing
 -- | with no logic worth typing - a name, a pattern, a reason - and the
 -- | one part that has to be writable without depending on the engine.
 exemptFile :: String
-exemptFile = "lint-exemptions.json"
+exemptFile = "lint-exemptions.yaml"
+
+-- | What it used to be called, and still is in repositories nobody has
+-- | moved yet. Read the same way: JSON is YAML.
+-- | Private.
+oldExemptFile :: String
+oldExemptFile = "lint-exemptions.json"
 
 -- | No file, no exemptions - which is a repository holding itself to
 -- | the whole set, not a broken one.
@@ -100,8 +126,12 @@ readExemptionsWith :: Standing -> Aff (Either String Exemptions)
 readExemptionsWith standing = do
   attempted <- Aff.attempt (FS.readTextFile UTF8 exemptFile)
   case attempted of
-    Left _ -> pure (Right noExemptions)
     Right text -> pure (decodeExemptionsWith standing text)
+    Left _ -> do
+      older <- Aff.attempt (FS.readTextFile UTF8 oldExemptFile)
+      case older of
+        Left _ -> pure (Right noExemptions)
+        Right text -> pure (decodeExemptionsWith standing text)
 
 -- | The file's contents, decoded. Uses `decodeExemptionsWith`.
 -- | Uses `decodeExemptionsWith`.
@@ -111,31 +141,39 @@ decodeExemptions = decodeExemptionsWith All
 -- | The file's contents, decoded, honouring one standing.
 -- | Private.
 decodeExemptionsWith :: Standing -> String -> Either String Exemptions
-decodeExemptionsWith standing text = case jsonParser text of
+decodeExemptionsWith standing text = case Yaml.parse text of
   Left err -> Left (exemptFile <> ": " <> err)
   Right json -> case runDecode decodeTop json of
     Left err -> Left (exemptFile <> ": " <> printJsonDecodeError err)
     Right top -> Right case standing of
-      All -> top.exempt <> top.pending
-      ByDesignOnly -> top.exempt
+      All -> top.exemptions
+      ByDesignOnly -> Array.filter (\one -> one.kind == ByDesign) top.exemptions
 
 -- |
 -- | without naming both, and `rule` defaults to `"*"` because the
 -- | common case is a module nothing should look at.
 -- | Private.
-decodeTop :: DecodeJson { exempt :: Exemptions, pending :: Exemptions }
-decodeTop = decodeRecordWithDefaults { exempt: [], pending: [] }
-  { exempt: decodeArray decodeExempt
-  , pending: decodeArray decodeExempt
-  }
+decodeTop :: DecodeJson { exemptions :: Exemptions }
+decodeTop = decodeRecordWithDefaults { exemptions: [] }
+  { exemptions: decodeArray decodeExempt }
+
+-- | that does not say whether it is a decision or a debt is the thing
+-- | this field was added to stop.
+-- | Private.
+decodeKind :: DecodeJson Kind
+decodeKind = decodeString # decodeRefine \said -> case said of
+  "by-design" -> Right ByDesign
+  "backlog" -> Right Backlog
+  _ -> Left (TypeMismatch "kind is `by-design` or `backlog`")
 
 -- | Private.
 decodeExempt :: DecodeJson Exempt
 decodeExempt = decodeRecordWithDefaults
-  { rule: "*", modules: [], paths: [], why: "" }
+  { rule: "*", modules: [], paths: [], kind: Backlog, why: "" }
   { rule: decodeString
   , modules: decodeArray decodeString
   , paths: decodeArray decodeString
+  , kind: decodeKind
   , why: decodeString
   }
 
