@@ -14,7 +14,6 @@ module Lint.Internal.Exemptions
 import Prelude
 
 import Data.Array (any, filter) as Array
-import Lint.Internal.Yaml as Yaml
 import Data.Either (Either(..))
 import Data.Json.Decode
   ( DecodeJson
@@ -31,6 +30,7 @@ import Data.Maybe (isJust, maybe) as Maybe
 import Data.String (Pattern(..), split, stripPrefix, stripSuffix) as Str
 import Effect.Aff (Aff)
 import Effect.Aff (attempt) as Aff
+import Lint.Internal.Yaml as Yaml
 import Node.Encoding (Encoding(..))
 import Node.FS.Aff as FS
 

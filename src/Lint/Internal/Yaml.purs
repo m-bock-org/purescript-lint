@@ -2,8 +2,6 @@ module Lint.Internal.Yaml
   ( parse
   ) where
 
-import Prelude
-
 import Data.Argonaut.Core (Json)
 import Data.Either (Either(..))
 
