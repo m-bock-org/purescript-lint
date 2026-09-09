@@ -150,6 +150,13 @@
           # to do this itself and stopped, and the difference matters here:
           # outside it, `purs` is whatever is installed globally.
           shellHook = ''
+            # What a clone needs before `spago --offline` will run at
+            # all: the registry index declared fresh, and `.spago` from
+            # the store. Without it a machine that has never built
+            # PureScript fails on the first recipe, naming a registry
+            # nobody asked for.
+            ${lib.mkSpagoShellHook { inherit workspace; }}
+
             case $- in *i*) export PS1="(lint) $PS1" ;; esac
 
             # Point the editor at this exact toolchain. Done here rather
