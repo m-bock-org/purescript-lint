@@ -22,9 +22,10 @@ import Node.Path as Path
 type Exposed = Array String
 
 exposedFile :: String
-exposedFile = "exposed-modules.yaml"
+exposedFile = "package.yaml"
 
--- | What one package offers, read from beside its manifest. `Nothing`
+-- | What one package offers, read from `package.yaml` beside its
+-- | manifest. `Nothing`
 -- | is a package that has not said, which is not the same as a package
 -- | that offers nothing. Uses `decodeExposed`.
 readExposed :: FilePath -> Aff (Either String (Maybe Exposed))
@@ -49,7 +50,11 @@ decodeFile = decodeRecord { exposes: decodeArray decodeString }
 
 -- ## Context
 --
--- What a package offers, beside the manifest that says what it takes.
+-- What a package says about itself, beside the manifest that says what
+-- it takes. Today one key, `exposes`; the shape is an object rather
+-- than a bare list so the second key does not need a second file, and
+-- unknown keys are ignored so a repository can carry one this build
+-- does not know about yet.
 --
 -- Not in `spago.yaml`: a key spago does not know makes it skip the
 -- whole file, and a skipped manifest takes its package out of the
