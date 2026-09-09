@@ -123,16 +123,6 @@ readOrFail standing = do
     Left why -> Aff.throwError (Aff.error why)
     Right exemptions -> pure exemptions
 
--- | Private. Used only by `lintWorkspace`. The same rule for anything
--- | read from a file beside the sources: absent is silent, unreadable
--- | stops the run.
-orFail :: ∀ a. Aff (Either String a) -> Aff a
-orFail read = do
-  found <- read
-  case found of
-    Left why -> Aff.throwError (Aff.error why)
-    Right value -> pure value
-
 -- |
 -- | Ask for a fix for each finding that has guidance, and keep the ones
 -- | that survive being linted again.
