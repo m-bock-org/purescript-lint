@@ -40,19 +40,7 @@ spec = do
       outcomeLine "r" "M" (Fix.Declined "no") `shouldEqual` "r in M - no"
 
   describe "fixWorkspace" do
-    -- The proposal has to *differ* from the file, or this cannot tell
-    -- a working revert from a missing one - handing back the source
-    -- unchanged leaves the file identical either way, which is how the
-    -- first version of this spec passed with the revert deleted.
-    --
-    -- Appending a comment changes the file and removes no finding, so
-    -- the attempt must be declined and the file must come back exactly
-    -- as it was.
     it "puts the source back when a proposal is rejected" do
-      -- The file to check is the one actually proposed to, which is
-      -- whichever module the first finding is in - not one named here.
-      -- Naming one meant asserting that an untouched file was
-      -- untouched, and that passed with the revert deleted.
       seen <- liftEffect (Ref.new Nothing)
       _ <- runLinterWith
         { skipModules: []
@@ -93,11 +81,6 @@ spec = do
         rules
       count <- liftEffect (Ref.read asked)
       count `shouldEqual` 0
-
-    -- An empty module has no declarations, so every finding in it is
-    -- gone and the re-lint is perfectly happy - which is the whole
-    -- shape this guards against. Lint cannot see that the rest of the
-    -- workspace no longer compiles, because no rule is about that.
     it "a proposal that lints clean but fails verify is put back, and the proposer is told why" do
       rounds <- liftEffect (Ref.new [])
       proposed <- liftEffect (Ref.new Nothing)
@@ -117,13 +100,8 @@ spec = do
             }
         }
         rules
-
-      -- Told what did not compile, and asked again - a failed verify is
-      -- a round of the retry loop, not the end of the attempt.
       asked <- liftEffect (Ref.read rounds)
       asked `shouldEqual` [ [], [ "UnknownName: Nothing" ] ]
-
-      -- And the file is not left emptied.
       touched <- liftEffect (Ref.read proposed)
       case touched of
         Nothing -> fail "nothing was proposed to, so this proved nothing"
@@ -167,3 +145,24 @@ thisFile :: String
 thisFile = "test/Test/Lint/FixSpec.purs"
 
 
+--
+-- `spec`
+-- The proposal has to *differ* from the file, or this cannot tell
+-- a working revert from a missing one - handing back the source
+-- unchanged leaves the file identical either way, which is how the
+-- first version of this spec passed with the revert deleted.
+--
+-- Appending a comment changes the file and removes no finding, so
+-- the attempt must be declined and the file must come back exactly
+-- as it was.
+-- The file to check is the one actually proposed to, which is
+-- whichever module the first finding is in - not one named here.
+-- Naming one meant asserting that an untouched file was
+-- untouched, and that passed with the revert deleted.
+-- An empty module has no declarations, so every finding in it is
+-- gone and the re-lint is perfectly happy - which is the whole
+-- shape this guards against. Lint cannot see that the rest of the
+-- workspace no longer compiles, because no rule is about that.
+-- Told what did not compile, and asked again - a failed verify is
+-- a round of the retry loop, not the end of the attempt.
+-- And the file is not left emptied.
