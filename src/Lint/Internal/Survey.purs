@@ -1,6 +1,5 @@
 module Lint.Internal.Survey
-  ( module Exports
-  , PackageLint
+  ( PackageLint
   , PackageRule
   , PackageSurvey
   , Subject(..)
@@ -29,8 +28,6 @@ import Prelude
 import Data.Array (any, concatMap, filter) as Array
 import Data.Maybe (Maybe(..))
 import Lint.Internal.Exemptions (Exemptions)
-import Lint.Internal.Upstream (UpstreamPackage)
-import Lint.Internal.Upstream (UpstreamPackage) as Exports
 import Lint.Internal.Exemptions as Exemptions
 import Lint.Internal.Rule (class RuleOptions, Examples, Grouped, ModuleKind)
 import Node.Path (FilePath)
@@ -80,28 +77,16 @@ type SubjectExemption = { name :: String, appliesTo :: Subject -> Boolean }
 
 -- | One package's modules, for a rule that reasons about a package.
 -- |
--- | `exposes` is what the package said it offers, from `package.yaml`
--- | beside its manifest. `Nothing` is a package that has not said,
--- | which a rule must be able to tell from a package that says it
--- | offers nothing.
 type PackageSurvey =
   { packageName :: String
   , packagePath :: FilePath
   , dependencies :: Array String
-  , exposes :: Maybe (Array String)
   , modules :: Array SurveyModule
   }
 
 -- | Every package, for a rule that reasons across package boundaries.
 -- |
--- | `upstream` is every dependency fetched from git, with what it says
--- | it offers if it says anything. That is how a boundary holds across
--- | repositories, and how a rule can tell a package of ours that forgot
--- | to say from a stranger that never claimed to.
-type WorkspaceSurvey =
-  { packages :: Array PackageSurvey
-  , upstream :: Array UpstreamPackage
-  }
+type WorkspaceSurvey = { packages :: Array PackageSurvey }
 
 -- | A rule that sees one package's layout.
 type PackageLint cfg =

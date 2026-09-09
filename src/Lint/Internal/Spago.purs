@@ -1,6 +1,5 @@
 module Lint.Internal.Spago
   ( spagoLsPackages
-  , SpagoGitPackage
   , SpagoWorkspacePackage
   , SpagoPkg(..)
   ) where
@@ -37,17 +36,9 @@ type SpagoWorkspacePackage =
   , dependencies :: Array String
   }
 
--- | A package spago knows about: one of this repository's own, one
--- | fetched from git, or one from the registry, which is every other
--- | kind and nothing this reads.
-data SpagoPkg
-  = PkgOther
-  | PkgGit SpagoGitPackage
-  | PkgWorkspace SpagoWorkspacePackage
-
--- | A dependency fetched from git, and where from. The url is how a
--- | repository can tell a package of its own from a stranger's.
-type SpagoGitPackage = { name :: String, url :: String }
+-- | A package spago knows about. Only the workspace's own are ours to
+-- | lint; registry and git dependencies fold together as `PkgOther`.
+data SpagoPkg = PkgOther | PkgWorkspace SpagoWorkspacePackage
 
 -- | Every package spago knows about, ours and its dependencies.
 -- | Uses `decodeSpagoPkg`.
@@ -71,18 +62,11 @@ decodeSpagoPkg name = ado
   tagged <- decodeAttempt (decodeRecord { type: decodeString })
   located <- decodeAttempt workspacePathOf
   declared <- decodeAttempt workspaceDependenciesOf
-  fetched <- decodeAttempt gitUrlOf
   in
-    case tagged, located, fetched of
-      Right { type: "workspace" }, Right { value: { path } }, _ ->
+    case tagged, located of
+      Right { type: "workspace" }, Right { value: { path } } ->
         PkgWorkspace { name, path, dependencies: dependenciesOr declared }
-      Right { type: "git" }, _, Right { value: { git } } ->
-        PkgGit { name, url: git }
-      _, _, _ -> PkgOther
-
--- | Private.
-gitUrlOf :: DecodeJson { value :: { git :: String } }
-gitUrlOf = decodeRecord { value: decodeRecord { git: decodeString } }
+      _, _ -> PkgOther
 
 -- | Private.
 workspacePathOf :: DecodeJson { value :: { path :: String } }
