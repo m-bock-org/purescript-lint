@@ -32,7 +32,8 @@ import Lint.Internal.Rule
   )
 import Lint.Internal.RuleSet (FlatRules, Rule, flattenRules)
 import Lint.Internal.Exposed as Exposed
-import Lint.Internal.Foreign as Foreign
+import Lint.Internal.Spago (SpagoGitPackage)
+import Lint.Internal.Upstream as Upstream
 import Lint.Internal.Survey (PackageSurvey, SurveyModule, runSurveyRules)
 import Lint.Internal.Workspace (WorkspaceModule)
 import Lint.Internal.Workspace as Workspace
@@ -107,7 +108,7 @@ lintWorkspace { skipModules, standing } rules = do
       , violations: sum (map _.violations perModule)
       , located: Array.concatMap _.located perModule
       }
-  surveyed <- reportSurvey configured (map _.survey scanned)
+  surveyed <- reportSurvey configured workspace.git (map _.survey scanned)
   let total = sum (map _.violations scanned) + surveyed
   pure
     { located: Array.concatMap _.located scanned
@@ -290,14 +291,14 @@ same a b =
     && a.finding.message == b.finding.message
 
 -- | Private. Used only by `lintWorkspace`.
-reportSurvey :: Configured -> Array PackageSurvey -> Aff Int
-reportSurvey { flatRules, exemptions } surveys = do
-  foreign_ <- Foreign.foreignPackages
+reportSurvey :: Configured -> Array SpagoGitPackage -> Array PackageSurvey -> Aff Int
+reportSurvey { flatRules, exemptions } fetched surveys = do
+  upstream <- Upstream.upstreamPackages fetched
   let
     forPackage s = map (append (s.packageName <> ": "))
       (runSurveyRules exemptions flatRules.packages s)
     perPackage = Array.concatMap forPackage surveys
-    perWorkspace = runSurveyRules exemptions flatRules.workspaces { packages: surveys, foreign_ }
+    perWorkspace = runSurveyRules exemptions flatRules.workspaces { packages: surveys, upstream }
     findings = perPackage <> perWorkspace
   for_ findings \msg -> log ("  " <> msg)
   pure (Array.length findings)

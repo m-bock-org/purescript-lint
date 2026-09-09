@@ -1,11 +1,11 @@
-module Lint.Internal.Foreign
-  ( ForeignPackage
-  , foreignPackages
+module Lint.Internal.Upstream
+  ( UpstreamPackage
+  , upstreamPackages
   ) where
 
 import Prelude
 
-import Data.Array (mapMaybe) as Array
+import Data.Array (filter, mapMaybe) as Array
 import Data.Either (Either(..))
 import Data.Either (hush) as Either
 import Data.Maybe (Maybe(..))
@@ -14,42 +14,58 @@ import Data.String (Pattern(..))
 import Data.String (split, stripSuffix) as Str
 import Data.Traversable (traverse)
 import Effect.Aff (Aff)
-import Effect.Aff (attempt) as Aff
+import Effect.Aff (attempt, error, throwError) as Aff
 import Lint.Internal.Exposed (Exposed, decodeExposed, exposedFile)
+import Lint.Internal.Spago (SpagoGitPackage)
 import Node.Encoding (Encoding(..))
 import Node.FS.Aff as FS
 import Node.Glob.Basic (expandGlobs)
 import Node.Path (FilePath)
 import Node.Path (concat, dirname) as Path
 
--- | A package this repo depends on that says what it offers: where its
--- | checkout is, what it exposes, and the modules it holds.
-type ForeignPackage =
+-- | A package this repository depends on, as far as a boundary is
+-- | concerned: what it is called, where it came from, what it says it
+-- | offers, and the modules it holds.
+type UpstreamPackage =
   { name :: String
-  , exposes :: Exposed
+  , url :: String
+  , exposes :: Maybe Exposed
   , modules :: Array String
   }
 
--- | Every dependency carrying a `package.yaml`, which is every
--- | dependency of ours. Uses `packageAt`.
-foreignPackages :: Aff (Array ForeignPackage)
-foreignPackages = do
+-- | Every dependency fetched from git, with what it says about itself
+-- | if it says anything. Uses `packageAt`.
+upstreamPackages :: Array SpagoGitPackage -> Aff (Array UpstreamPackage)
+upstreamPackages fetched = do
   found <- expandGlobs "." [ Path.concat [ ".spago", "p", "**", exposedFile ] ]
-  read <- traverse packageAt (Set.toUnfoldable found)
-  pure (Array.mapMaybe identity read)
+  said <- traverse packageAt (Set.toUnfoldable found)
+  pure (map (asUpstream said) fetched)
 
--- | Private. Used only by `foreignPackages`. Uses `nameOf`,
--- | `modulesUnder`.
-packageAt :: FilePath -> Aff (Maybe ForeignPackage)
+-- | Private. Used only by `upstreamPackages`. What one dependency
+-- | said, if it is among the files that were found.
+asUpstream
+  :: Array { name :: String, exposes :: Exposed, modules :: Array String }
+  -> SpagoGitPackage
+  -> UpstreamPackage
+asUpstream said fetched =
+  case Array.filter (\one -> one.name == fetched.name) said of
+    [ one ] ->
+      { name: fetched.name, url: fetched.url, exposes: Just one.exposes, modules: one.modules }
+    _ ->
+      { name: fetched.name, url: fetched.url, exposes: Nothing, modules: [] }
+
+-- | Private. Used only by `upstreamPackages`. Uses `nameOf`,
+-- | `modulesUnder`. A file that will not parse stops the run: a
+-- | boundary that quietly went unchecked is worse than one nobody
+-- | claimed.
+packageAt :: FilePath -> Aff { name :: String, exposes :: Exposed, modules :: Array String }
 packageAt path = do
-  text <- Aff.attempt (FS.readTextFile UTF8 path)
-  case Either.hush text of
-    Nothing -> pure Nothing
-    Just said -> case decodeExposed path said of
-      Left _ -> pure Nothing
-      Right exposes -> do
-        modules <- modulesUnder (Path.dirname path)
-        pure (Just { name: nameOf path, exposes, modules })
+  said <- FS.readTextFile UTF8 path
+  case decodeExposed path said of
+    Left why -> Aff.throwError (Aff.error why)
+    Right exposes -> do
+      modules <- modulesUnder (Path.dirname path)
+      pure { name: nameOf path, exposes, modules }
 
 -- | Private, depth 2. Used only by `packageAt`. The package's name as
 -- | spago cached it: `.spago/p/<name>/<ref>/...`.
@@ -113,8 +129,15 @@ trimmed name = case Str.stripSuffix (Pattern "\r") name of
 -- spago's own layout. A glob for `package.yaml` under `.spago/p` finds
 -- every checkout that has one, at whatever depth its subdirectory sits.
 --
--- A dependency without the file is not policed, which is every package
--- from the registry and every one of ours that has not adopted it yet.
--- An unreadable one is skipped rather than fatal - it is somebody
--- else's file, and a repository should not be stopped by it. Ours are
--- read strictly, because those we own.
+-- Only the dependencies fetched from git are listed at all. A package
+-- from the registry is a stranger's, arrives by version rather than by
+-- url, and is not something a repository of ours has an opinion about.
+--
+-- `url` is how a rule can tell one of ours from a stranger's, which
+-- matters because the file cannot be mandatory for everybody. A package
+-- of ours that has not said what it offers has forgotten to, and that
+-- is a finding; a stranger's saying nothing is just a stranger.
+--
+-- A file that will not parse stops the run wherever it came from. The
+-- alternative is a boundary that silently stopped being checked, which
+-- is the failure this whole idea exists to prevent.

@@ -17,7 +17,7 @@ import Lint.Internal.Survey
   ( class HasSubjectIgnore
   , PackageLint
   , PackageRule
-  , ForeignPackage
+  , UpstreamPackage
   , PackageSurvey
   , Subject(..)
   , SubjectExemption

@@ -19,7 +19,7 @@ import Data.Traversable (traverse)
 import Effect.Aff (Aff)
 import Effect.Aff (error, throwError) as Aff
 import Lint.Internal.Rule (ModuleKind(..))
-import Lint.Internal.Spago (SpagoPkg(..), SpagoWorkspacePackage, spagoLsPackages)
+import Lint.Internal.Spago (SpagoGitPackage, SpagoPkg(..), SpagoWorkspacePackage, spagoLsPackages)
 import Node.Encoding (Encoding(..))
 import Node.FS.Aff as FS
 import Node.Glob.Basic (expandGlobs)
@@ -32,7 +32,10 @@ import PureScript.CST.Types (Module) as CST
 
 -- | Every package this repo owns, as a structural map. Cheap to hold
 -- | whole; a module's CST is read separately when something needs it.
-type Workspace = { packages :: Array LocalPackage }
+type Workspace =
+  { packages :: Array LocalPackage
+  , git :: Array SpagoGitPackage
+  }
 
 -- | One package: its spago name, its directory, what its own
 -- | `spago.yaml` depends on, and its modules.
@@ -74,13 +77,17 @@ getWorkspace =
   let
     workspaceOnly = case _ of
       PkgWorkspace p -> Just p
-      PkgOther -> Nothing
+      _ -> Nothing
+
+    fetchedOnly = case _ of
+      PkgGit p -> Just p
+      _ -> Nothing
 
   in
     do
       pkgs <- spagoLsPackages
       packages <- traverse toLocalPackage (Array.mapMaybe workspaceOnly pkgs)
-      pure { packages }
+      pure { packages, git: Array.mapMaybe fetchedOnly pkgs }
 
 -- | Private. Used only by `getWorkspace`. Uses `modulesOf`.
 toLocalPackage :: SpagoWorkspacePackage -> Aff LocalPackage
