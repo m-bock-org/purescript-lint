@@ -36,7 +36,7 @@ readExposed packagePath = do
     Left _ -> pure (Right Nothing)
     Right text -> pure (map Just (decodeExposed path text))
 
--- | Private. Used only by `readExposed`. Uses `Yaml.parse`.
+-- | The file's contents, decoded. Uses `Yaml.parse`.
 decodeExposed :: FilePath -> String -> Either String Exposed
 decodeExposed path text = case Yaml.parse text of
   Left why -> Left (path <> ": " <> why)

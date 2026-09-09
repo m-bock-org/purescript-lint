@@ -1,5 +1,6 @@
 module Lint.Internal.Survey
-  ( PackageLint
+  ( module Exports
+  , PackageLint
   , PackageRule
   , PackageSurvey
   , Subject(..)
@@ -28,6 +29,8 @@ import Prelude
 import Data.Array (any, concatMap, filter) as Array
 import Data.Maybe (Maybe(..))
 import Lint.Internal.Exemptions (Exemptions)
+import Lint.Internal.Foreign (ForeignPackage)
+import Lint.Internal.Foreign (ForeignPackage) as Exports
 import Lint.Internal.Exemptions as Exemptions
 import Lint.Internal.Rule (class RuleOptions, Examples, Grouped, ModuleKind)
 import Node.Path (FilePath)
@@ -90,7 +93,14 @@ type PackageSurvey =
   }
 
 -- | Every package, for a rule that reasons across package boundaries.
-type WorkspaceSurvey = { packages :: Array PackageSurvey }
+-- |
+-- | `foreign_` is the dependencies that say what they offer, which is
+-- | how a boundary holds across repositories: a package from the
+-- | registry says nothing and is not there.
+type WorkspaceSurvey =
+  { packages :: Array PackageSurvey
+  , foreign_ :: Array ForeignPackage
+  }
 
 -- | A rule that sees one package's layout.
 type PackageLint cfg =

@@ -32,6 +32,7 @@ import Lint.Internal.Rule
   )
 import Lint.Internal.RuleSet (FlatRules, Rule, flattenRules)
 import Lint.Internal.Exposed as Exposed
+import Lint.Internal.Foreign as Foreign
 import Lint.Internal.Survey (PackageSurvey, SurveyModule, runSurveyRules)
 import Lint.Internal.Workspace (WorkspaceModule)
 import Lint.Internal.Workspace as Workspace
@@ -291,11 +292,12 @@ same a b =
 -- | Private. Used only by `lintWorkspace`.
 reportSurvey :: Configured -> Array PackageSurvey -> Aff Int
 reportSurvey { flatRules, exemptions } surveys = do
+  foreign_ <- Foreign.foreignPackages
   let
     forPackage s = map (append (s.packageName <> ": "))
       (runSurveyRules exemptions flatRules.packages s)
     perPackage = Array.concatMap forPackage surveys
-    perWorkspace = runSurveyRules exemptions flatRules.workspaces { packages: surveys }
+    perWorkspace = runSurveyRules exemptions flatRules.workspaces { packages: surveys, foreign_ }
     findings = perPackage <> perWorkspace
   for_ findings \msg -> log ("  " <> msg)
   pure (Array.length findings)
