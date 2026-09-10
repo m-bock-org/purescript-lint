@@ -12,16 +12,17 @@ import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Effect.Class (liftEffect)
 import Effect.Ref as Ref
-import Lint (runLinterWith)
+import Lint (runLinter, runLinterWith)
 import Lint.Internal.Exemptions as Exemptions
 import Lint.Fix (guidanceFor, outcomeLine)
 import Lint.Fix as Fix
-import Lint.Rule (perDecl)
+import Lint.Rule (ModuleLint, fixed, perDecl, perModule)
 import Lint.RuleSet (Rule)
 import Lint.RuleSet as RuleSet
 import Test.Lint.ReadmeExample (maxFunctionArity)
 import Node.Encoding (Encoding(..))
 import Node.FS.Aff as FS
+import Node.FS.Stats as Stats
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (fail, shouldEqual)
 
@@ -62,6 +63,13 @@ spec = do
         Just { path, source } -> do
           after <- FS.readTextFile UTF8 path
           after `shouldEqual` source
+
+    it "a rule that rewrites writes nothing when nobody asked for a fix" do
+      before <- FS.stat thisFile
+      clean <- runLinter rewriting
+      after <- FS.stat thisFile
+      Stats.modifiedTimeMs after `shouldEqual` Stats.modifiedTimeMs before
+      clean `shouldEqual` false
 
     it "asks nobody when no rule has guidance" do
       asked <- liftEffect (Ref.new 0)
@@ -139,6 +147,19 @@ table = [ { rule: "max-function-arity", says: "give it fewer arguments" } ]
 -- | Private.
 rules :: Array Rule
 rules = [ RuleSet.rule (perDecl maxFunctionArity 0) ]
+
+-- | Private.
+rewriting :: Array Rule
+rewriting = [ RuleSet.rule (perModule alwaysRewrites unit) ]
+
+-- | Private.
+alwaysRewrites :: ModuleLint Unit
+alwaysRewrites =
+  { name: "always-rewrites"
+  , description: "Rewrites every module it is given, so a spec can see whether a run writes."
+  , examples: Nothing
+  , rule: \_config _context mod -> fixed mod
+  }
 
 -- | Private.
 thisFile :: String

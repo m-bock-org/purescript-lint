@@ -1,4 +1,12 @@
-module Lint (LintOptions, LintReport, Located, lintWorkspace, runLinter, runLinterWith) where
+module Lint
+  ( LintOptions
+  , LintReport
+  , Located
+  , Rewrite
+  , lintWorkspace
+  , runLinter
+  , runLinterWith
+  ) where
 
 import Prelude
 
@@ -53,7 +61,8 @@ import PureScript.CST.Types
 -- | Run a rule set over the Spago workspace in the current directory,
 -- | reporting everything it finds. `true` when the workspace is clean.
 -- |
--- | A rule that rewrites is applied: the module is written back.
+-- | Nothing is written. A rule that rewrites reports a finding saying
+-- | so, and `--fix` is what applies it.
 -- | Uses `runLinterWith`.
 runLinter :: Array Rule -> Aff Boolean
 runLinter = runLinterWith { skipModules: [], fix: Nothing, standing: Exemptions.All }
@@ -63,7 +72,10 @@ runLinterWith :: LintOptions -> Array Rule -> Aff Boolean
 runLinterWith options rules = do
   case options.fix of
     Nothing -> pure unit
-    Just fix -> void (fixWorkspace options fix rules)
+    Just fix -> do
+      before <- lintWorkspace options rules
+      applyRewrites before.rewrites
+      void (fixWorkspace options fix rules)
   report <- lintWorkspace options rules
   printByRule report.located
   printSummary report.total (Array.length (Array.nub (map _.moduleName report.located)))
@@ -102,6 +114,7 @@ lintWorkspace { skipModules, standing } rules = do
       { survey
       , violations: sum (map _.violations perModule)
       , located: Array.concatMap _.located perModule
+      , rewrites: Array.mapMaybe _.rewrite perModule
       }
   surveyed <- reportSurvey configured (map _.survey scanned)
   let total = sum (map _.violations scanned) + surveyed
@@ -109,6 +122,7 @@ lintWorkspace { skipModules, standing } rules = do
     { located: Array.concatMap _.located scanned
     , total
     , moduleCount
+    , rewrites: Array.concatMap _.rewrites scanned
     }
 
 -- |
@@ -138,6 +152,14 @@ readOrFail standing = do
 -- | At most one finding per module, so one run's fixes are independent
 -- | of each other: two in a module stack, the second written on top of
 -- | the first, and then neither can be looked at alone.
+-- | Private, depth 2. Used only by `runLinterWith`.
+applyRewrites :: Array Rewrite -> Aff Unit
+applyRewrites rewrites = do
+  for_ rewrites \one -> do
+    Workspace.writeModule one.path one.rewritten
+    log ("  rewrote " <> one.moduleName)
+  unless (Array.null rewrites) (log "")
+
 -- | Private, depth 2. Used only by `runLinterWith`. Uses `lintWorkspace`, `sameModule`,
 -- | `hasGuidance`, `attemptOne`.
 fixWorkspace :: LintOptions -> FixConfig -> Array Rule -> Aff Int
@@ -310,6 +332,7 @@ type LintReport =
   { located :: Array Located
   , total :: Int
   , moduleCount :: Int
+  , rewrites :: Array Rewrite
   }
 
 type Configured =
@@ -322,6 +345,15 @@ type ModuleScan =
   { surveyed :: SurveyModule
   , violations :: Int
   , located :: Array Located
+  , rewrite :: Maybe Rewrite
+  }
+
+-- | One module a rule rewrote, and what it would be written as. Handed
+-- | back rather than written, so the caller decides.
+type Rewrite =
+  { path :: String
+  , moduleName :: String
+  , rewritten :: CST.Module Void
   }
 
 -- | One finding, and the module it was found in.
@@ -406,7 +438,7 @@ lintModule { skipModules, flatRules, exemptions } packageName workspaceModule = 
       , header: headerOf original
       }
   if Array.any (\g -> g.appliesTo context) skipModules then
-    pure { surveyed, violations: 0, located: [] }
+    pure { surveyed, violations: 0, located: [], rewrite: Nothing }
   else do
     let
       afterModules = runRules exemptions context flatRules.modules original
@@ -417,14 +449,19 @@ lintModule { skipModules, flatRules, exemptions } packageName workspaceModule = 
       violations = afterModules.violations <> afterDeclarations.violations <>
         afterExpressions.violations
       fixed = afterModules.fixed || afterDeclarations.fixed || afterExpressions.fixed
-    pure unit
-    when fixed (Workspace.writeModule workspaceModule.path afterExpressions.result)
     pure
       { surveyed
       , violations: Array.length violations
       , located: map
           (\f -> { moduleName: context.moduleName, path: context.path, finding: f })
           violations
+      , rewrite:
+          if fixed then Just
+            { path: workspaceModule.path
+            , moduleName: context.moduleName
+            , rewritten: afterExpressions.result
+            }
+          else Nothing
       }
 
 type PerDeclaration =

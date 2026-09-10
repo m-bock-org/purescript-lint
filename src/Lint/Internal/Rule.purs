@@ -66,6 +66,10 @@ violations found =
 fixed :: ∀ a. a -> LintResult a
 fixed = Fixed
 
+-- | Private. Used only by `runRules`.
+rewritable :: String
+rewritable = "this rule can write the fix itself - run with --fix to apply it"
+
 -- | Attach a suggestion to every finding of a result. The hint belongs
 -- | to the rule, so it reads the same however many things were found.
 withHint :: ∀ a. String -> LintResult a -> LintResult a
@@ -375,7 +379,11 @@ runRules exemptions context rules initial =
               { violations =
                   acc.violations <> map (asFinding groups r hint) (NEA.toArray found)
               }
-            Fixed result -> acc { result = result, fixed = true }
+            Fixed result -> acc
+              { result = result
+              , fixed = true
+              , violations = acc.violations <> [ asFinding groups r Nothing rewritable ]
+              }
     asFinding groups r hint message = { rule: ruleInfo r, groups, message, hint }
   in
     Array.foldl applyOne { result: initial, fixed: false, violations: [] } rules
