@@ -134,13 +134,14 @@ runRulesSpec = describe "runRules" do
         sampleModule
     map _.message outcome.violations `shouldEqual` [ "nope" ]
 
-  it "marks the outcome fixed when a rule rewrites" do
+  it "marks the outcome fixed when a rule rewrites, and reports it" do
     let
       outcome = runRules noExemptions context
         [ { groups: [], rule: perModule_ alwaysFixes } ]
         sampleModule
     outcome.fixed `shouldEqual` true
-    map _.message outcome.violations `shouldEqual` []
+    map _.message outcome.violations `shouldEqual`
+      [ "this rule can write the fix itself - run with --fix to apply it" ]
 
   it "reports every finding a rule made, not just the first" do
     let
