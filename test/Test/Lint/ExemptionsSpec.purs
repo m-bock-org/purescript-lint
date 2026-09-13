@@ -23,7 +23,7 @@ import Node.Encoding (Encoding(..))
 import Node.FS.Aff as FS
 import Test.Lint.ReadmeExample (maxFunctionArity)
 import Test.Spec (Spec, describe, it)
-import Test.Spec.Assertions (shouldEqual)
+import Test.Spec.Assertions (fail, shouldEqual)
 
 -- | Uses `withoutExemptions`, `withExemptions`.
 spec :: Spec Unit
@@ -50,6 +50,19 @@ spec = do
       without <- withoutExemptions countFindings
       (without > with) `shouldEqual` true
 
+  describe "since" do
+    it "reads the day it was written" do
+      case Exemptions.decodeExemptions dated of
+        Left why -> fail why
+        Right [ one ] -> one.since `shouldEqual` "2026-09-13"
+        Right _ -> fail "expected exactly one exemption"
+
+    it "is empty when nobody said, rather than invented" do
+      case Exemptions.decodeExemptions silencing of
+        Left why -> fail why
+        Right [ one ] -> one.since `shouldEqual` ""
+        Right _ -> fail "expected exactly one exemption"
+
   describe "matching" do
     it "takes a trailing star as a prefix" do
       matches sample { rule: "r", moduleName: "A.B.C", path: "", declarationName: Nothing }
@@ -67,11 +80,11 @@ spec = do
 
 -- | Private.
 sample :: Exemptions
-sample = [ { rule: "*", modules: [ "A.*" ], paths: [], kind: Backlog, why: "because" } ]
+sample = [ { rule: "*", modules: [ "A.*" ], paths: [], kind: Backlog, since: "", why: "because" } ]
 
 -- | Private.
 byPath :: Exemptions
-byPath = [ { rule: "*", modules: [], paths: [ "Scratch.purs" ], kind: Backlog, why: "because" } ]
+byPath = [ { rule: "*", modules: [], paths: [ "Scratch.purs" ], kind: Backlog, since: "", why: "because" } ]
 
 -- | Private. Uses `inInternal`.
 countFindings :: Aff Int
@@ -82,6 +95,19 @@ countFindings = do
 -- | Private.
 inInternal :: ∀ r. { moduleName :: String | r } -> Boolean
 inInternal _ = true
+
+-- | Private.
+dated :: String
+dated =
+  """
+  exemptions:
+    - rule: max-function-arity
+      modules:
+        - Lint.Internal.*
+      kind: backlog
+      since: 2026-09-13
+      why: proving the day is read
+  """
 
 -- | Private.
 silencing :: String

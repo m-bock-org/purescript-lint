@@ -26,6 +26,14 @@ foreign import parseImpl :: String -> { ok :: Boolean, value :: Json, why :: Str
 -- an unquoted `no` that becomes `false`, an indented block that folds
 -- differently than it reads.
 --
+-- `CORE_SCHEMA`, which is js-yaml's default minus timestamps. With the
+-- default, an unquoted `2026-09-13` comes back as a `Date` - not JSON,
+-- so `Json` was a claim this module did not keep, and a decoder asking
+-- for a string got "Expected value of type 'String'" with no line
+-- number. A configuration file has no business carrying typed dates.
+-- The result then goes through `JSON.parse(JSON.stringify(...))`, so
+-- what comes back is JSON however js-yaml is configured next.
+--
 -- Untyped on the way out on purpose. What comes back is `Json` and
 -- every field is decoded by the same decoder that read the JSON form,
 -- so the format changed and the schema did not.

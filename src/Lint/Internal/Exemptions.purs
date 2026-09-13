@@ -47,14 +47,39 @@ import Node.FS.Aff as FS
 -- | `why` is not decoration. An exemption without a reason is
 -- | indistinguishable from an oversight six months later, and the
 -- | reason is the only part that makes it reviewable.
+-- |
+-- | `since` is the day it was written, as `YYYY-MM-DD`. It is empty
+-- | when nobody said, which is a fact worth reporting rather than a
+-- | value worth inventing.
 type Exempt =
   { rule :: String
   , modules :: Array String
   , paths :: Array String
   , kind :: Kind
+  , since :: String
   , why :: String
   }
 
+-- | **A `since` and not an `until`**, which was the other proposal and
+-- | is worse three ways.
+-- |
+-- | An `until` is a guess made at the moment you know least - when the
+-- | exemption is written, before anyone has tried to remove it. A
+-- | `since` is a fact, and it cannot be wrong.
+-- |
+-- | An `until` that arrives turns the build red on a date nobody chose
+-- | for a reason nobody had that morning, so it gets bumped, and a
+-- | date that is always bumped is a date that means nothing.
+-- |
+-- | And age is derivable from a `since`, so anything an `until` was
+-- | meant to give is still there: sorting by age ranks exemptions the
+-- | same way, and lets a fixer pick the oldest rather than the first
+-- | `n` it happens to read. That was the ask this field came from.
+-- |
+-- | Empty when nobody said. A tool reports those separately rather
+-- | than inventing a day, because "nobody knows how old this is" is
+-- | itself the finding.
+-- |
 -- | Whether this is a decision or a debt.
 -- |
 -- | `ByDesign` is a rule that does not apply here and never will, and
@@ -169,11 +194,12 @@ decodeKind = decodeString # decodeRefine \said -> case said of
 -- | Private.
 decodeExempt :: DecodeJson Exempt
 decodeExempt = decodeRecordWithDefaults
-  { rule: "*", modules: [], paths: [], kind: Backlog, why: "" }
+  { rule: "*", modules: [], paths: [], kind: Backlog, since: "", why: "" }
   { rule: decodeString
   , modules: decodeArray decodeString
   , paths: decodeArray decodeString
   , kind: decodeKind
+  , since: decodeString
   , why: decodeString
   }
 
