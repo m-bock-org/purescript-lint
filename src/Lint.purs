@@ -67,7 +67,7 @@ import PureScript.CST.Types
 runLinter :: Array Rule -> Aff Boolean
 runLinter = runLinterWith { skipModules: [], fix: Nothing, standing: Exemptions.All }
 
--- | Uses `fixWorkspace`, `lintWorkspace`, `printByRule`, `printSummary`.
+-- | Uses `lintWorkspace`, `applyRewrites`, `fixWorkspace`, `printByRule`, `printSummary`.
 runLinterWith :: LintOptions -> Array Rule -> Aff Boolean
 runLinterWith options rules = do
   case options.fix of
