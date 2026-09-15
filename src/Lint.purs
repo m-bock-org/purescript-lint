@@ -4,6 +4,7 @@ module Lint
   , Located
   , Rewrite
   , lintWorkspace
+  , rewriteDecls
   , runLinter
   , runLinterWith
   ) where
@@ -50,12 +51,15 @@ import PureScript.CST.Types
   , Expr
   , Ident(..)
   , ImportDecl(..)
+  , Instance(..)
+  , InstanceBinding(..)
   , Labeled(..)
   , Module(..)
   , ModuleBody(..)
   , ModuleHeader(..)
   , ModuleName(..)
   , Name(..)
+  , Separated(..)
   ) as CST
 
 -- | Run a rule set over the Spago workspace in the current directory,
@@ -503,15 +507,72 @@ rewriteDecls :: LintContext -> CST.Module Void -> PerDeclaration -> RuleOutcome 
 rewriteDecls context (CST.Module moduleFields) perDeclaration =
   let
     CST.ModuleBody bodyFields = moduleFields.body
-    declResults = map
-      (\decl -> perDeclaration (context { declarationName = declarationNameOf decl }) decl)
-      bodyFields.decls
+    declResults = map (declarationAndMembers context perDeclaration) bodyFields.decls
   in
     { result: CST.Module
         (moduleFields { body = CST.ModuleBody (bodyFields { decls = map _.result declResults }) })
     , fixed: Array.any _.fixed declResults
     , violations: Array.concatMap _.violations declResults
     }
+
+declarationAndMembers
+  :: LintContext -> PerDeclaration -> CST.Declaration Void -> RuleOutcome (CST.Declaration Void)
+declarationAndMembers context perDeclaration decl =
+  let
+    outer = perDeclaration (context { declarationName = declarationNameOf decl }) decl
+  in
+    case outer.result of
+      CST.DeclInstanceChain (CST.Separated sep) ->
+        let
+          headResult = instanceMembers context perDeclaration sep.head
+          tailResults = map
+            (\(Tuple tok inst) -> { tok, outcome: instanceMembers context perDeclaration inst })
+            sep.tail
+        in
+          { result: CST.DeclInstanceChain
+              ( CST.Separated
+                  { head: headResult.result
+                  , tail: map (\t -> Tuple t.tok t.outcome.result) tailResults
+                  }
+              )
+          , fixed: outer.fixed || headResult.fixed || Array.any _.fixed (map _.outcome tailResults)
+          , violations: outer.violations <> headResult.violations
+              <> Array.concatMap (_.violations <<< _.outcome) tailResults
+          }
+      _ -> outer
+
+instanceMembers
+  :: LintContext -> PerDeclaration -> CST.Instance Void -> RuleOutcome (CST.Instance Void)
+instanceMembers context perDeclaration (CST.Instance inst) = case inst.body of
+  Nothing -> { result: CST.Instance inst, fixed: false, violations: [] }
+  Just (Tuple tok bindings) ->
+    let
+      outcomes = map (oneMember context perDeclaration) bindings
+    in
+      { result: CST.Instance (inst { body = Just (Tuple tok (map _.result outcomes)) })
+      , fixed: Array.any _.fixed (NEA.toArray outcomes)
+      , violations: Array.concatMap _.violations (NEA.toArray outcomes)
+      }
+
+oneMember
+  :: LintContext
+  -> PerDeclaration
+  -> CST.InstanceBinding Void
+  -> RuleOutcome (CST.InstanceBinding Void)
+oneMember context perDeclaration binding =
+  let
+    asDeclaration = case binding of
+      CST.InstanceBindingName fields -> CST.DeclValue fields
+      CST.InstanceBindingSignature labeled -> CST.DeclSignature labeled
+    result = perDeclaration
+      (context { declarationName = declarationNameOf asDeclaration })
+      asDeclaration
+    back = case result.result of
+      CST.DeclValue fields -> CST.InstanceBindingName fields
+      CST.DeclSignature labeled -> CST.InstanceBindingSignature labeled
+      _ -> binding
+  in
+    { result: back, fixed: result.fixed, violations: result.violations }
 
 type ExprLintState = { violations :: Array Finding, fixed :: Boolean }
 
