@@ -5,6 +5,7 @@ import Prelude
 import Effect (Effect)
 import Test.Lint.ExemptionsSpec as ExemptionsSpec
 import Test.Lint.FixSpec as FixSpec
+import Test.Lint.InstanceMembersSpec as InstanceMembersSpec
 import Test.Lint.Internal.DedentSpec as DedentSpec
 import Test.Lint.Internal.RuleSetSpec as RuleSetSpec
 import Test.Lint.Internal.RuleSpec as RuleSpec
@@ -23,3 +24,4 @@ main =
     ReadmeExampleSpec.spec
     ExemptionsSpec.spec
     FixSpec.spec
+    InstanceMembersSpec.spec
