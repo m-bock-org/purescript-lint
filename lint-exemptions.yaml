@@ -74,12 +74,18 @@ exemptions:
       - Lint.Internal.Exemptions
       - Test.Lint.ExemptionsSpec
       - Lint.Internal.Dedent
-    kind: backlog
+    kind: by-design
     why: >
       Trailing Context blocks, which the public set forbids because that
       convention is this workspace's and a stranger never agreed to it.
       The prose belongs in doc comments on the declarations it
-      describes.
+      describes - and moving it there is a judgement per paragraph, not
+      a rewrite. `by-design` rather than `backlog` because the fixer
+      honours only `by-design`: a `backlog` entry is an invitation for
+      the nightly to relocate this prose, and the relocator splits a
+      block by line, so a sentence sharing a line with a generated one
+      is dropped. That cost notary 13 sentences and encode-decode 9,
+      on two consecutive nights, before anyone noticed.
 
   - rule: single-line-signature
     modules:
@@ -194,11 +200,29 @@ exemptions:
   - rule: comment-policy
     modules:
       - Test.Lint.FixSpec
-    kind: backlog
+    kind: by-design
     why: >
       A spec whose prose sits in trailing blocks. Specs are read by
       whoever changes them, and this one earns its explanation - it took
-      four attempts to become a test that could fail.
+      four attempts to become a test that could fail. `by-design` for
+      the same reason as the entry above: `backlog` would hand this
+      paragraph to the nightly relocator, which drops a sentence that
+      shares a line with a generated one.
+
+  - rule: declaration-notes
+    modules:
+      - "*"
+    kind: by-design
+    why: >
+      Michael ended generated declaration notes on 2026-09-16: comments
+      are banned except section comments, and the house fixer deletes
+      `-- | Private, depth N. Used only by X.` rather than maintaining
+      it. This repository pins the regulator at 17abc2b, which predates
+      that decision and still writes those notes - so the nightly has
+      been keeping 141 of them up to date. ghost-buster/2026-09-18-0210
+      is one night of it, and it moved the count from 227 to 228.
+      Off here until the pin moves past the decision, at which point
+      this entry goes and the notes go with it.
 
   - rule: max-do-nesting-depth
     modules:
