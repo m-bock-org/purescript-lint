@@ -26,6 +26,7 @@ import Prelude
 
 import Data.Array (find) as Array
 import Data.Either (Either)
+import Data.Foldable (fold)
 import Data.Maybe (Maybe)
 import Effect.Aff (Aff)
 
@@ -125,4 +126,4 @@ guidanceFor table rule = map _.says (Array.find (\g -> g.rule == rule) table)
 outcomeLine :: String -> String -> Outcome -> String
 outcomeLine rule moduleName = case _ of
   Fixed -> "fixed " <> rule <> " in " <> moduleName
-  Declined why -> rule <> " in " <> moduleName <> " - " <> why
+  Declined why -> fold [ rule, " in ", moduleName, " - ", why ]

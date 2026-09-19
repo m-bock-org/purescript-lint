@@ -95,6 +95,7 @@ exemptions:
       - Lint.Internal.Spago
       - Lint.Internal.Survey
     kind: backlog
+    since: "2026-09-19"
     why: >
       Signatures with several constrained type variables that do not fit
       on one line. The fix is usually a named type alias.
@@ -106,6 +107,7 @@ exemptions:
       - Test.Lint.Internal.RuleSetSpec
       - Test.Lint.ReadmeExampleSpec
     kind: backlog
+    since: "2026-09-19"
     why: >
       Nested brackets past the limit, mostly record literals and test
       fixtures.
@@ -116,12 +118,7 @@ exemptions:
       - Test.Lint.Internal.RuleSpec
       - Test.Lint.ReadmeExampleSpec
     kind: backlog
-    why: no reason was recorded for this one
-
-  - rule: same-constructor-arm
-    modules:
-      - Lint.Internal.Exemptions
-    kind: backlog
+    since: "2026-09-19"
     why: no reason was recorded for this one
 
   - rule: no-same-kind-block-nesting
@@ -129,38 +126,26 @@ exemptions:
       - Lint.Internal.Exemptions
       - Lint
     kind: backlog
+    since: "2026-09-19"
     why: >
       A case inside a case in the module matcher.
 
   - rule: no-bare-either-hush
     modules:
       - Lint.Internal.Spago
-    kind: backlog
+    kind: by-design
     why: >
-      One bare hush dropping a decode error from spago ls packages. It
-      wants hushBecause and a written reason - a one-line fix nobody has
-      made.
-
-  - rule: no-where-clauses
-    modules:
-      - Lint
-      - Lint.Internal.Rule
-    kind: backlog
-    why: >
-      Two where clauses predating the rule.
-
-  - rule: hoistable-local
-    modules:
-      - Lint
-      - Lint.Internal.Rule
-    kind: backlog
-    why: no reason was recorded for this one
+      `hushBecause` lives in `data-either-reasoned`, which is a git
+      dependency, and this package publishes to the registry - a
+      published package cannot take one. The rule is right and its fix
+      is unavailable here, which is a decision rather than a debt.
 
   - rule: max-function-arity
     modules:
       - Lint
       - Lint.Internal.Rule
     kind: backlog
+    since: "2026-09-19"
     why: >
       Two functions past the limit; both want their arguments grouped
       into a record.
@@ -169,22 +154,16 @@ exemptions:
     modules:
       - Lint
     kind: backlog
+    since: "2026-09-19"
     why: >
       The fix loop threads options, rules and exemptions through four
       frames. Worth restructuring.
-
-  - rule: max-operator-chain
-    modules:
-      - Lint
-      - Lint.Fix
-    kind: backlog
-    why: >
-      Two chains past the limit, both in string building.
 
   - rule: no-stuttering-name
     modules:
       - Lint
     kind: backlog
+    since: "2026-09-19"
     why: >
       One name repeating its module.
 
@@ -228,6 +207,7 @@ exemptions:
     modules:
       - Test.Lint.FixSpec
     kind: backlog
+    since: "2026-09-19"
     why: >
       Nested do blocks in the stubbed proposers.
 
@@ -243,6 +223,7 @@ exemptions:
     modules:
       - Test.Lint.FixSpec
     kind: backlog
+    since: "2026-09-19"
     why: no reason was recorded for this one
 
   - rule: constant-escape-arm

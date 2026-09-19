@@ -15,6 +15,7 @@ import Prelude
 
 import Data.Array (any, filter) as Array
 import Data.Either (Either(..))
+import Data.Either (either) as Either
 import Data.Json.Decode
   ( DecodeJson
   , JsonDecodeError(..)
@@ -164,15 +165,24 @@ decodeExemptions :: String -> Either String Exemptions
 decodeExemptions = decodeExemptionsWith All
 
 -- | The file's contents, decoded, honouring one standing.
--- | Private.
+-- | Private. Uses `fromThisFile`.
 decodeExemptionsWith :: Standing -> String -> Either String Exemptions
-decodeExemptionsWith standing text = case Yaml.parse text of
-  Left err -> Left (exemptFile <> ": " <> err)
-  Right json -> case runDecode decodeTop json of
-    Left err -> Left (exemptFile <> ": " <> printJsonDecodeError err)
-    Right top -> Right case standing of
-      All -> top.exemptions
-      ByDesignOnly -> Array.filter (\one -> one.kind == ByDesign) top.exemptions
+decodeExemptionsWith standing text = do
+  json <- fromThisFile identity (Yaml.parse text)
+  top <- fromThisFile printJsonDecodeError (runDecode decodeTop json)
+  pure case standing of
+    All -> top.exemptions
+    ByDesignOnly -> Array.filter (\one -> one.kind == ByDesign) top.exemptions
+
+-- | The same answer, with this file's name in front of whatever went
+-- | wrong. Written with `either` rather than a `case`, because a case
+-- | that rebuilds `Left` around its own payload and hands `Right`
+-- | back untouched is `either` spelled with more syntax - which is
+-- | what `same-constructor-arm` says, three times, about the version
+-- | this replaces.
+-- | Private. Used only by `decodeExemptionsWith`.
+fromThisFile :: ∀ e a. (e -> String) -> Either e a -> Either String a
+fromThisFile say = Either.either (\err -> Left (exemptFile <> ": " <> say err)) Right
 
 -- |
 -- | without naming both, and `rule` defaults to `"*"` because the
