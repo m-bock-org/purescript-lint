@@ -17,6 +17,7 @@ import PureScript.CST.Types (Declaration(..), Module)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
+-- | Uses `seenIn`.
 spec :: Spec Unit
 spec = describe "a declaration rule and the instances in a module" do
   it "is handed a top-level value and its signature, as it always was" do
@@ -58,14 +59,17 @@ spec = describe "a declaration rule and the instances in a module" do
       , "  show _ = \"thing\""
       ] `shouldEqual` [ "top", "top", "show" ]
 
+-- | Private. Used only by `spec`. Uses `source`, `recorder`.
 seenIn :: Array String -> Array String
 seenIn body = case parseModule (source body) of
   ParseSucceeded m -> (recorder m).violations # map _.message
   _ -> [ "the fixture did not parse" ]
 
+-- | Private, depth 2. Used only by `seenIn`.
 source :: Array String -> String
 source body = Str.joinWith "\n" ([ "module M where", "" ] <> body) <> "\n"
 
+-- | Private, depth 2. Used only by `seenIn`. Uses `noted`, `named`.
 recorder :: Module Void -> RuleOutcome (Module Void)
 recorder m = rewriteDecls topContext m \context decl ->
   { result: decl
@@ -73,6 +77,7 @@ recorder m = rewriteDecls topContext m \context decl ->
   , violations: Array.mapMaybe (map noted) [ named decl context ]
   }
 
+-- | Private, depth 3. Used only by `recorder`.
 noted :: String -> Finding
 noted message =
   { rule: { name: "recorder", description: "", examples: Nothing }
@@ -81,12 +86,14 @@ noted message =
   , hint: Nothing
   }
 
+-- | Private, depth 3. Used only by `recorder`.
 named :: Declaration Void -> LintContext -> Maybe String
 named decl context = case decl of
   DeclValue _ -> context.declarationName
   DeclSignature _ -> context.declarationName
   _ -> Nothing
 
+-- | Private.
 topContext :: LintContext
 topContext =
   { packageName: "sample-pkg"
