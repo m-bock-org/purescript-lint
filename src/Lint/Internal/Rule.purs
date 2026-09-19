@@ -66,7 +66,7 @@ violations found =
 fixed :: ∀ a. a -> LintResult a
 fixed = Fixed
 
--- | Private. Used only by `runRules`.
+-- | Private.
 rewritable :: String
 rewritable = "this rule can write the fix itself - run with --fix to apply it"
 
