@@ -262,6 +262,23 @@ judge options fix rules before one was text = do
 -- | Private, depth 6. Used only by `judge`. Uses `same`, `newFindings`,
 -- | `describe`, `verified`.
 -- |
+-- | **The new-findings check is workspace-wide, and used not to be.**
+-- | `started` was computed against the target module alone, so a fix
+-- | whose consequences landed in *other* modules passed the judge
+-- | silently. The first pull request ghost-buster ever opened is the
+-- | example: two `explicit-imports` fixes, both correct-looking, both
+-- | kept - and the repository went from 799 findings to 971. An open
+-- | `import Node.Process as Process` imports everything; naming
+-- | `exit'` un-imports the rest, and every export that was only
+-- | reachable through that open import starts firing somewhere else.
+-- | No rule notices in the module that changed, because the change was
+-- | right there.
+-- |
+-- | Only one file is written per attempt, so a finding that appears
+-- | anywhere in the workspace is attributable to that file. Comparing
+-- | against the whole of `before` costs nothing and is the honest
+-- | question: did this fix make the repository worse.
+-- |
 -- | Split out of `judge` so the re-lint can be attempted rather than
 -- | trusted. A proposal that does not parse used to take the whole run
 -- | down: `lintWorkspace` throws out of `Aff`, so the original source
@@ -285,8 +302,7 @@ assessed
   -> Aff { outcome :: Fix.Outcome, broke :: Array String }
 assessed _ fix before one was after = do
   let here = Array.filter (\a -> a.moduleName == one.moduleName) after.located
-  let wasHere = Array.filter (\a -> a.moduleName == one.moduleName) before
-  let started = Array.filter (\a -> not (Array.any (same a) wasHere)) here
+  let started = Array.filter (\a -> not (Array.any (same a) before)) after.located
   if Array.any (same one) here then do
     FS.writeTextFile UTF8 one.path was
     pure { outcome: Fix.Declined "the finding is still there", broke: [] }
