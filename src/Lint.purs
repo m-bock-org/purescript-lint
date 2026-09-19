@@ -71,7 +71,7 @@ import PureScript.CST.Types
 runLinter :: Array Rule -> Aff Boolean
 runLinter = runLinterWith { skipModules: [], fix: Nothing, standing: Exemptions.All }
 
--- | Uses `fixWorkspace`, `lintWorkspace`, `printByRule`, `printSummary`.
+-- | Uses `lintWorkspace`, `applyRewrites`, `fixWorkspace`, `printByRule`, `printSummary`.
 runLinterWith :: LintOptions -> Array Rule -> Aff Boolean
 runLinterWith options rules = do
   case options.fix of
@@ -471,7 +471,7 @@ lintModule { skipModules, flatRules, exemptions } packageName workspaceModule = 
 type PerDeclaration =
   LintContext -> CST.Declaration Void -> RuleOutcome (CST.Declaration Void)
 
--- | Private, depth 3. Used only by `rewriteDecls`.
+-- | Private.
 declarationNameOf :: CST.Declaration Void -> Maybe String
 declarationNameOf = case _ of
   CST.DeclValue { name: CST.Name { name: CST.Ident n } } -> Just n
@@ -502,7 +502,7 @@ importsOf (CST.Module { header: CST.ModuleHeader { imports } }) =
     )
     imports
 
--- | Private, depth 2. Used only by `lintModule`. Uses `declarationNameOf`.
+-- | Uses `declarationAndMembers`.
 rewriteDecls :: LintContext -> CST.Module Void -> PerDeclaration -> RuleOutcome (CST.Module Void)
 rewriteDecls context (CST.Module moduleFields) perDeclaration =
   let
@@ -515,6 +515,7 @@ rewriteDecls context (CST.Module moduleFields) perDeclaration =
     , violations: Array.concatMap _.violations declResults
     }
 
+-- | Private, depth 3. Used only by `rewriteDecls`. Uses `declarationNameOf`, `instanceMembers`.
 declarationAndMembers
   :: LintContext -> PerDeclaration -> CST.Declaration Void -> RuleOutcome (CST.Declaration Void)
 declarationAndMembers context perDeclaration decl =
@@ -541,6 +542,7 @@ declarationAndMembers context perDeclaration decl =
           }
       _ -> outer
 
+-- | Private, depth 4. Used only by `declarationAndMembers`. Uses `oneMember`.
 instanceMembers
   :: LintContext -> PerDeclaration -> CST.Instance Void -> RuleOutcome (CST.Instance Void)
 instanceMembers context perDeclaration (CST.Instance inst) = case inst.body of
@@ -554,6 +556,7 @@ instanceMembers context perDeclaration (CST.Instance inst) = case inst.body of
       , violations: Array.concatMap _.violations (NEA.toArray outcomes)
       }
 
+-- | Private, depth 5. Used only by `instanceMembers`. Uses `declarationNameOf`.
 oneMember
   :: LintContext
   -> PerDeclaration
