@@ -24,7 +24,8 @@ import Data.String.Pattern (Pattern(..))
 import Data.Traversable (for)
 import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff)
-import Effect.Aff (error, throwError) as Aff
+import Effect.Aff (attempt, error, throwError) as Aff
+import Effect.Exception (message) as Exc
 import Effect.Class.Console (log)
 import Lint.Fix (FixConfig)
 import Lint.Fix as Fix
@@ -71,7 +72,7 @@ import PureScript.CST.Types
 runLinter :: Array Rule -> Aff Boolean
 runLinter = runLinterWith { skipModules: [], fix: Nothing, standing: Exemptions.All }
 
--- | Uses `fixWorkspace`, `lintWorkspace`, `printByRule`, `printSummary`.
+-- | Uses `lintWorkspace`, `applyRewrites`, `fixWorkspace`, `printByRule`, `printSummary`.
 runLinterWith :: LintOptions -> Array Rule -> Aff Boolean
 runLinterWith options rules = do
   case options.fix of
@@ -248,7 +249,41 @@ judge
   -> Aff { outcome :: Fix.Outcome, broke :: Array String }
 judge options fix rules before one was text = do
   FS.writeTextFile UTF8 one.path text
-  after <- lintWorkspace options rules
+  relinted <- Aff.attempt (lintWorkspace options rules)
+  case relinted of
+    Left err -> do
+      FS.writeTextFile UTF8 one.path was
+      pure
+        { outcome: Fix.Declined "it does not parse"
+        , broke: [ Exc.message err ]
+        }
+    Right after -> assessed options fix before one was after
+
+-- | Private, depth 6. Used only by `judge`. Uses `same`, `newFindings`,
+-- | `describe`, `verified`.
+-- |
+-- | Split out of `judge` so the re-lint can be attempted rather than
+-- | trusted. A proposal that does not parse used to take the whole run
+-- | down: `lintWorkspace` throws out of `Aff`, so the original source
+-- | was never restored and the findings still queued behind it were
+-- | never attempted. One unparseable proposal out of six cost the
+-- | other five.
+-- |
+-- | A parse failure is fed back as `broke`, not just reverted, because
+-- | it is the most correctable mistake a proposer makes - `import Data.
+-- | Variant as V (Variant, tag)` puts the alias before the import list
+-- | and is a round of the retry loop away from right. `verify`'s
+-- | failures already work this way; parsing had no such path because
+-- | nothing expected it to fail.
+assessed
+  :: LintOptions
+  -> Fix.FixConfig
+  -> Array Located
+  -> Located
+  -> String
+  -> LintReport
+  -> Aff { outcome :: Fix.Outcome, broke :: Array String }
+assessed _ fix before one was after = do
   let here = Array.filter (\a -> a.moduleName == one.moduleName) after.located
   let wasHere = Array.filter (\a -> a.moduleName == one.moduleName) before
   let started = Array.filter (\a -> not (Array.any (same a) wasHere)) here
@@ -471,7 +506,7 @@ lintModule { skipModules, flatRules, exemptions } packageName workspaceModule = 
 type PerDeclaration =
   LintContext -> CST.Declaration Void -> RuleOutcome (CST.Declaration Void)
 
--- | Private, depth 3. Used only by `rewriteDecls`.
+-- | Private.
 declarationNameOf :: CST.Declaration Void -> Maybe String
 declarationNameOf = case _ of
   CST.DeclValue { name: CST.Name { name: CST.Ident n } } -> Just n
@@ -502,7 +537,7 @@ importsOf (CST.Module { header: CST.ModuleHeader { imports } }) =
     )
     imports
 
--- | Private, depth 2. Used only by `lintModule`. Uses `declarationNameOf`.
+-- | Uses `declarationAndMembers`.
 rewriteDecls :: LintContext -> CST.Module Void -> PerDeclaration -> RuleOutcome (CST.Module Void)
 rewriteDecls context (CST.Module moduleFields) perDeclaration =
   let
@@ -515,6 +550,7 @@ rewriteDecls context (CST.Module moduleFields) perDeclaration =
     , violations: Array.concatMap _.violations declResults
     }
 
+-- | Private, depth 3. Used only by `rewriteDecls`. Uses `declarationNameOf`, `instanceMembers`.
 declarationAndMembers
   :: LintContext -> PerDeclaration -> CST.Declaration Void -> RuleOutcome (CST.Declaration Void)
 declarationAndMembers context perDeclaration decl =
@@ -541,6 +577,7 @@ declarationAndMembers context perDeclaration decl =
           }
       _ -> outer
 
+-- | Private, depth 4. Used only by `declarationAndMembers`. Uses `oneMember`.
 instanceMembers
   :: LintContext -> PerDeclaration -> CST.Instance Void -> RuleOutcome (CST.Instance Void)
 instanceMembers context perDeclaration (CST.Instance inst) = case inst.body of
@@ -554,6 +591,7 @@ instanceMembers context perDeclaration (CST.Instance inst) = case inst.body of
       , violations: Array.concatMap _.violations (NEA.toArray outcomes)
       }
 
+-- | Private, depth 5. Used only by `instanceMembers`. Uses `declarationNameOf`.
 oneMember
   :: LintContext
   -> PerDeclaration
