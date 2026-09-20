@@ -292,7 +292,7 @@ instance RuleLike ExprRule (CST.Expr Void) where
 
 -- | Everything a report needs of a rule, taken while its setting is
 -- | still in scope.
--- | Private.
+-- | Private. Uses `printed`.
 ruleInfoOf
   :: ∀ cfg r
    . { name :: String
@@ -306,12 +306,19 @@ ruleInfoOf lint =
   , description: lint.description
   , examples: map printed lint.examples
   }
-  where
-  printed examples =
-    { config: examples.printConfig examples.config
-    , good: examples.good
-    , bad: examples.bad
-    }
+
+-- | One rule's examples with its configuration already printed, which
+-- | is what a report can show and a `Examples cfg` cannot.
+-- | Private. Used only by `ruleInfoOf`.
+printed
+  :: ∀ cfg
+   . { config :: cfg, printConfig :: cfg -> Maybe String, good :: Array String, bad :: Array String }
+  -> { config :: Maybe String, good :: Array String, bad :: Array String }
+printed examples =
+  { config: examples.printConfig examples.config
+  , good: examples.good
+  , bad: examples.bad
+  }
 
 -- | A rule's own description of itself, carried alongside anything it
 -- | finds so the report can say which rule spoke and what it wants.
@@ -357,8 +364,13 @@ exemptHere exemptions context rule = Exemptions.matches exemptions
   }
 
 -- | Run every rule over one value, threading each rewrite into the next
+-- | One finding, as the report will read it.
+-- | Private. Used only by `runRules`.
+asFinding :: Array String -> RuleInfo -> Maybe String -> String -> Finding
+asFinding groups rule hint message = { rule, groups, message, hint }
+
 -- | rule's input.
--- | Uses `exemptHere`, `skipWhen`.
+-- | Uses `exemptHere`, `skipWhen`, `asFinding`.
 runRules
   :: ∀ r a
    . RuleLike r a
@@ -377,13 +389,12 @@ runRules exemptions context rules initial =
             Passed -> acc
             Violations found hint -> acc
               { violations =
-                  acc.violations <> map (asFinding groups r hint) (NEA.toArray found)
+                  acc.violations <> map (asFinding groups (ruleInfo r) hint) (NEA.toArray found)
               }
             Fixed result -> acc
               { result = result
               , fixed = true
-              , violations = acc.violations <> [ asFinding groups r Nothing rewritable ]
+              , violations = acc.violations <> [ asFinding groups (ruleInfo r) Nothing rewritable ]
               }
-    asFinding groups r hint message = { rule: ruleInfo r, groups, message, hint }
   in
     Array.foldl applyOne { result: initial, fixed: false, violations: [] } rules

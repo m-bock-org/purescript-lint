@@ -175,9 +175,13 @@ fixWorkspace options fix rules = do
       (Array.nubByEq sameModule (Array.filter (hasGuidance fix.guidance) report.located))
   log ""
   log
-    ( "  " <> show (Array.length report.located) <> " findings, "
-        <> show (Array.length mine)
-        <> " with guidance to try"
+    ( fold
+        [ "  "
+        , show (Array.length report.located)
+        , " findings, "
+        , show (Array.length mine)
+        , " with guidance to try"
+        ]
     )
   fixes <- for mine \one -> do
     outcome <- attemptOne options fix rules report.located one
@@ -448,13 +452,18 @@ printByRule located =
 
 -- | One example under its label, with anything after the first line
 -- | indented to sit under it.
--- | Private, depth 3. Used only by `printByRule`.
+-- | Private, depth 3. Used only by `printByRule`. Uses `indented`.
 labelled :: String -> String -> Aff Unit
 labelled label text =
-  for_ (Array.mapWithIndex indent (Str.split (Pattern "\n") text)) log
-  where
-  indent 0 line = "      " <> label <> "  " <> line
-  indent _ line = "            " <> line
+  for_ (Array.mapWithIndex (indented label) (Str.split (Pattern "\n") text)) log
+
+-- | A line of an example, under its label or under the space the label
+-- | took. Top level rather than a `where` binding, so the two
+-- | equations are one declaration anywhere a reader looks for it.
+-- | Private, depth 4. Used only by `labelled`.
+indented :: String -> Int -> String -> String
+indented label 0 line = "      " <> label <> "  " <> line
+indented _ _ line = "            " <> line
 
 -- | The one-line total, after everything else.
 -- | Private, depth 2. Used only by `runLinterWith`.
