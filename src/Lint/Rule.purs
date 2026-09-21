@@ -9,7 +9,6 @@ module Lint.Rule (module Exports) where
 import Lint.Internal.Dedent (dedent) as Exports
 import Lint.Internal.Rule
   ( class HasExclude
-  , class Identified
   , class RuleOptions
   , DeclarationLint
   , DeclarationRule
@@ -28,7 +27,6 @@ import Lint.Internal.Rule
   , disabled
   , exclude
   , fixed
-  , idOf
   , perDecl
   , perDecl_
   , perExpr

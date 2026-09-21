@@ -23,9 +23,7 @@ module Lint.Internal.Rule
   , class RuleOptions
   , disabled
   , exclude
-  , class Identified
   , fixed
-  , idOf
   , perDecl
   , perDecl_
   , perExpr
@@ -294,27 +292,6 @@ instance RuleLike ExprRule (CST.Expr Void) where
   ruleExclude (ExprRule r) = r.exclude
   ruleCheck (ExprRule r) = r.check
   ruleInfo (ExprRule r) = r.info
-
--- | Which rule this is, for a configured rule at any level.
--- |
--- | Its own class rather than a method of `RuleLike`, because a survey
--- | rule is not `RuleLike` - its check reads a package or a workspace
--- | rather than a piece of syntax - and an id every level has is the
--- | point of the type.
--- |
--- | Total, unlike asking a `Rule` from a set: that can be a group, and
--- | a group is a heading rather than a rule.
-class Identified r where
-  idOf :: r -> RuleId
-
-instance Identified ModuleRule where
-  idOf = _.name <<< ruleInfo
-
-instance Identified DeclarationRule where
-  idOf = _.name <<< ruleInfo
-
-instance Identified ExprRule where
-  idOf = _.name <<< ruleInfo
 
 -- | Everything a report needs of a rule, taken while its setting is
 -- | still in scope.

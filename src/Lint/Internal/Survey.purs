@@ -18,6 +18,7 @@ module Lint.Internal.Survey
   , perWorkspace_
   , runSurveyRules
   , surveyCheck
+  , surveyName
   , surveyDisabled
   , surveyExclude
   ) where
@@ -29,7 +30,7 @@ import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
 import Lint.Internal.Exemptions (Exemptions)
 import Lint.Internal.Exemptions as Exemptions
-import Lint.Internal.Rule (class Identified, class RuleOptions, Examples, Grouped, ModuleKind, RuleId(..), idOf)
+import Lint.Internal.Rule (class RuleOptions, Examples, Grouped, ModuleKind, RuleId(..))
 import Node.Path (FilePath)
 import PureScript.CST.Types (ModuleHeader) as CST
 
@@ -167,39 +168,30 @@ class SurveyLike r s | r -> s where
   -- | The check itself.
   surveyCheck :: r -> s -> Array SurveyFinding
 
--- | What the rule is called.
--- |
--- | Kept because a finding has to be exemptable by rule name, and a
--- | survey rule used to drop its name on the way in - which is also
--- | why survey findings print as bare lines rather than grouped under
--- | the rule that made them.
+  -- | What the rule is called.
+  -- |
+  -- | Kept because a finding has to be exemptable by rule name, and a
+  -- | survey rule used to drop its name on the way in - which is also
+  -- | why survey findings print as bare lines rather than grouped
+  -- | under the rule that made them.
+  surveyName :: r -> RuleId
 
 instance SurveyLike PackageRule PackageSurvey where
   surveyDisabled (PackageRule r) = r.disabled
   surveyExclude (PackageRule r) = r.exclude
   surveyCheck (PackageRule r) = r.check
-
-instance Identified PackageRule where
-  idOf (PackageRule r) = r.name
+  surveyName (PackageRule r) = r.name
 
 instance SurveyLike WorkspaceRule WorkspaceSurvey where
   surveyDisabled (WorkspaceRule r) = r.disabled
   surveyExclude (WorkspaceRule r) = r.exclude
   surveyCheck (WorkspaceRule r) = r.check
-
-instance Identified WorkspaceRule where
-  idOf (WorkspaceRule r) = r.name
+  surveyName (WorkspaceRule r) = r.name
 
 -- | Run every survey rule and collect what they found.
 -- | Uses `kept`, `notExempt`.
 runSurveyRules
-  :: ∀ r s
-   . SurveyLike r s
-  => Identified r
-  => Exemptions
-  -> Array (Grouped r)
-  -> s
-  -> Array String
+  :: ∀ r s. SurveyLike r s => Exemptions -> Array (Grouped r) -> s -> Array String
 runSurveyRules exemptions rules survey =
   let
     applyOne { rule: r }
@@ -221,11 +213,10 @@ kept r finding = not (Array.any (\ex -> ex.appliesTo finding.subject) (surveyExc
 -- | a module named there is exempt whichever kind of rule found it,
 -- | and a finding about one declaration answers to `Module#name` too.
 -- | Private. Used only by `runSurveyRules`. Uses `subjectName`, `subjectDeclaration`.
-notExempt
-  :: ∀ r s. SurveyLike r s => Identified r => Exemptions -> r -> SurveyFinding -> Boolean
+notExempt :: ∀ r s. SurveyLike r s => Exemptions -> r -> SurveyFinding -> Boolean
 notExempt exemptions r finding = not
   ( Exemptions.matches exemptions
-      { rule: unwrap (idOf r)
+      { rule: unwrap (surveyName r)
       , moduleName: subjectName finding.subject
       , path: ""
       , declarationName: subjectDeclaration finding.subject

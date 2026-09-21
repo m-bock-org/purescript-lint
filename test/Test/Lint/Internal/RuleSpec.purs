@@ -15,7 +15,6 @@ import Lint.Internal.Rule
   , disabled
   , exclude
   , fixed
-  , idOf
   , perModule_
   , runRules
   , violations
@@ -95,9 +94,6 @@ hinted =
 -- | Private.
 runRulesSpec :: Spec Unit
 runRulesSpec = describe "runRules" do
-
-  it "gives a rule an id that is the name it was written with" do
-    idOf (perModule_ alwaysViolates) `shouldEqual` RuleId "always-violates"
 
   it "names the rule that made each finding" do
     let
