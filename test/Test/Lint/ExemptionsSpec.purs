@@ -14,8 +14,8 @@ import Data.Maybe (Maybe(..))
 import Effect.Aff (Aff)
 import Effect.Aff (attempt) as Aff
 import Lint (lintWorkspace)
-import Lint.Internal.Exemptions as Exemptions
 import Lint.Internal.Exemptions (Exemptions, Kind(..), exemptFile, matches)
+import Lint.Internal.Exemptions as Exemptions
 import Lint.Rule (perDecl)
 import Lint.RuleSet (Rule)
 import Lint.RuleSet as RuleSet

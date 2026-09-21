@@ -4,24 +4,26 @@ import Prelude
 
 import Data.Array (length) as Array
 import Data.Maybe (Maybe(..))
-import Partial.Unsafe (unsafeCrashWith)
-import PureScript.CST (RecoveredParserResult(..), parseModule)
-import PureScript.CST.Types (Module) as CST
 import Lint.Internal.Exemptions (noExemptions)
 import Lint.Internal.Rule
-  ( LintContext
+  ( Grouped
+  , LintContext
   , ModuleKind(..)
   , ModuleLint
-  , Grouped
   , ModuleRule
+  , RuleId(..)
   , disabled
   , exclude
   , fixed
+  , idOf
   , perModule_
   , runRules
   , violations
   , withHint
   )
+import Partial.Unsafe (unsafeCrashWith)
+import PureScript.CST (RecoveredParserResult(..), parseModule)
+import PureScript.CST.Types (Module) as CST
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
@@ -94,10 +96,13 @@ hinted =
 runRulesSpec :: Spec Unit
 runRulesSpec = describe "runRules" do
 
+  it "gives a rule an id that is the name it was written with" do
+    idOf (perModule_ alwaysViolates) `shouldEqual` RuleId "always-violates"
+
   it "names the rule that made each finding" do
     let
       outcome = runRules noExemptions context [ { groups: [], rule: perModule_ alwaysViolates } ] sampleModule
-    map (_.rule.name) outcome.violations `shouldEqual` [ "always-violates" ]
+    map (_.rule.name) outcome.violations `shouldEqual` [ RuleId "always-violates" ]
 
   it "collects a rule's violation" do
     let
@@ -121,16 +126,22 @@ runRulesSpec = describe "runRules" do
   it "skips a rule whose exemption applies" do
     let
       outcome = runRules noExemptions context
-        [ { groups: [], rule: exclude [ { name: "by design", appliesTo: \_ _ -> true } ]
-            (perModule_ alwaysViolates) } ]
+        [ { groups: []
+          , rule: exclude [ { name: "by design", appliesTo: \_ _ -> true } ]
+              (perModule_ alwaysViolates)
+          }
+        ]
         sampleModule
     map _.message outcome.violations `shouldEqual` []
 
   it "runs a rule whose exemption does not apply" do
     let
       outcome = runRules noExemptions context
-        [ { groups: [], rule: exclude [ { name: "by design", appliesTo: \_ _ -> false } ]
-            (perModule_ alwaysViolates) } ]
+        [ { groups: []
+          , rule: exclude [ { name: "by design", appliesTo: \_ _ -> false } ]
+              (perModule_ alwaysViolates)
+          }
+        ]
         sampleModule
     map _.message outcome.violations `shouldEqual` [ "nope" ]
 

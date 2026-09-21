@@ -19,14 +19,15 @@ import Data.Either (Either(..))
 import Data.Foldable (fold, for_, sum)
 import Data.Maybe (Maybe(..))
 import Data.Maybe (fromMaybe, isJust, isNothing) as Maybe
+import Data.Newtype (unwrap)
 import Data.String.Common (joinWith, split) as Str
 import Data.String.Pattern (Pattern(..))
 import Data.Traversable (for)
 import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff)
 import Effect.Aff (attempt, error, throwError) as Aff
-import Effect.Exception (message) as Exc
 import Effect.Class.Console (log)
+import Effect.Exception (message) as Exc
 import Lint.Fix (FixConfig)
 import Lint.Fix as Fix
 import Lint.Internal.Exemptions (Exemptions)
@@ -217,7 +218,7 @@ attemptRound
   -> Aff (Step { left :: Int, broke :: Array String } Fix.Outcome)
 attemptRound options fix rules before one was state = do
   proposed <- fix.propose
-    { rule: one.finding.rule.name
+    { rule: unwrap one.finding.rule.name
     , moduleName: one.moduleName
     , path: one.path
     , message: one.finding.message
@@ -339,11 +340,11 @@ newFindings started = case started of
   [ only ] -> "a new finding, " <> describe only
   _ ->
     show (Array.length started) <> " new findings: "
-      <> Str.joinWith ", " (Array.nub (map (\a -> a.finding.rule.name) started))
+      <> Str.joinWith ", " (Array.nub (map (\a -> unwrap a.finding.rule.name) started))
 
 -- | Private.
 describe :: Located -> String
-describe one = one.finding.rule.name <> ": " <> one.finding.message
+describe one = unwrap one.finding.rule.name <> ": " <> one.finding.message
 
 -- | Private, depth 6. Used only by `judge`.
 same :: Located -> Located -> Boolean
@@ -431,7 +432,7 @@ printByRule located =
       log ""
       log
         ( "● " <> Str.joinWith " » "
-            (Array.snoc (NEA.head group).finding.groups rule.name)
+            (Array.snoc (NEA.head group).finding.groups (unwrap rule.name))
         )
       log ("    " <> rule.description)
       for_ sharedHint \h -> log ("    hint: " <> h)

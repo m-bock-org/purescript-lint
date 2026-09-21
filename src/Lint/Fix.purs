@@ -27,7 +27,9 @@ import Prelude
 import Data.Array (find) as Array
 import Data.Either (Either)
 import Data.Maybe (Maybe)
+import Data.Newtype (unwrap)
 import Effect.Aff (Aff)
+import Lint.Internal.Rule (RuleId)
 
 -- | What a proposer is told, and all it is told.
 -- |
@@ -68,7 +70,7 @@ type Propose = Brief -> Aff (Either String String)
 -- | in a repository whose prose belongs in a trailing block is not what
 -- | to do in one that has no such convention, and it is the same rule
 -- | in both.
-type Guidance = { rule :: String, says :: String }
+type Guidance = { rule :: RuleId, says :: String }
 
 -- | The whole of what a caller supplies to turn this on.
 -- |
@@ -118,11 +120,13 @@ data Outcome
 derive instance Eq Outcome
 
 -- | What to say about a rule, if anything.
-guidanceFor :: Array Guidance -> String -> Maybe String
+guidanceFor :: Array Guidance -> RuleId -> Maybe String
 guidanceFor table rule = map _.says (Array.find (\g -> g.rule == rule) table)
 
 -- | One line for the log.
-outcomeLine :: String -> String -> Outcome -> String
+outcomeLine :: RuleId -> String -> Outcome -> String
 outcomeLine rule moduleName = case _ of
-  Fixed -> "fixed " <> rule <> " in " <> moduleName
-  Declined why -> rule <> " in " <> moduleName <> " - " <> why
+  Fixed -> "fixed " <> named <> " in " <> moduleName
+  Declined why -> named <> " in " <> moduleName <> " - " <> why
+  where
+  named = unwrap rule

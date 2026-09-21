@@ -22,9 +22,12 @@ import Lint.Internal.Rule
   , ModuleKind(..)
   , ModuleLint
   , ModuleRule
+  , RuleId(..)
+  , RuleInfo
   , disabled
   , exclude
   , fixed
+  , idOf
   , perDecl
   , perDecl_
   , perExpr
