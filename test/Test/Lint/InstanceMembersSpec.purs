@@ -10,6 +10,7 @@ import Lint.Internal.Rule
   ( Finding
   , LintContext
   , ModuleKind(..)
+  , RuleId(..)
   , RuleOutcome
   )
 import PureScript.CST (RecoveredParserResult(..), parseModule)
@@ -80,7 +81,7 @@ recorder m = rewriteDecls topContext m \context decl ->
 -- | Private, depth 3. Used only by `recorder`.
 noted :: String -> Finding
 noted message =
-  { rule: { name: "recorder", description: "", examples: Nothing }
+  { rule: { name: RuleId "recorder", description: "", examples: Nothing }
   , groups: []
   , message
   , hint: Nothing

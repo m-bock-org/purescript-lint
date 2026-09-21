@@ -18,18 +18,19 @@ module Lint.Internal.Survey
   , perWorkspace_
   , runSurveyRules
   , surveyCheck
+  , surveyName
   , surveyDisabled
   , surveyExclude
-  , surveyName
   ) where
 
 import Prelude
 
 import Data.Array (any, concatMap, filter) as Array
 import Data.Maybe (Maybe(..))
+import Data.Newtype (unwrap)
 import Lint.Internal.Exemptions (Exemptions)
 import Lint.Internal.Exemptions as Exemptions
-import Lint.Internal.Rule (class RuleOptions, Examples, Grouped, ModuleKind)
+import Lint.Internal.Rule (class RuleOptions, Examples, Grouped, ModuleKind, RuleId(..))
 import Node.Path (FilePath)
 import PureScript.CST.Types (ModuleHeader) as CST
 
@@ -106,7 +107,7 @@ type WorkspaceLint cfg =
 
 -- | A package rule with its options applied.
 newtype PackageRule = PackageRule
-  { name :: String
+  { name :: RuleId
   , exclude :: Array SubjectExemption
   , disabled :: Boolean
   , check :: PackageSurvey -> Array SurveyFinding
@@ -115,7 +116,7 @@ newtype PackageRule = PackageRule
 -- | Run this rule once per package.
 perPackage :: ∀ cfg. PackageLint cfg -> cfg -> PackageRule
 perPackage lint config =
-  PackageRule { name: lint.name, exclude: [], disabled: false, check: lint.rule config }
+  PackageRule { name: RuleId lint.name, exclude: [], disabled: false, check: lint.rule config }
 
 -- | Run a rule that has nothing to configure once per package.
 -- | Uses `perPackage`.
@@ -130,7 +131,7 @@ instance HasSubjectIgnore PackageRule where
 
 -- | A workspace rule with its options applied.
 newtype WorkspaceRule = WorkspaceRule
-  { name :: String
+  { name :: RuleId
   , exclude :: Array SubjectExemption
   , disabled :: Boolean
   , check :: WorkspaceSurvey -> Array SurveyFinding
@@ -139,7 +140,7 @@ newtype WorkspaceRule = WorkspaceRule
 -- | Run this rule once over the whole workspace.
 perWorkspace :: ∀ cfg. WorkspaceLint cfg -> cfg -> WorkspaceRule
 perWorkspace lint config =
-  WorkspaceRule { name: lint.name, exclude: [], disabled: false, check: lint.rule config }
+  WorkspaceRule { name: RuleId lint.name, exclude: [], disabled: false, check: lint.rule config }
 
 -- | Run a rule that has nothing to configure over the whole workspace.
 -- | Uses `perWorkspace`.
@@ -166,13 +167,14 @@ class SurveyLike r s | r -> s where
   surveyExclude :: r -> Array SubjectExemption
   -- | The check itself.
   surveyCheck :: r -> s -> Array SurveyFinding
+
   -- | What the rule is called.
   -- |
   -- | Kept because a finding has to be exemptable by rule name, and a
   -- | survey rule used to drop its name on the way in - which is also
-  -- | why survey findings print as bare lines rather than grouped under
-  -- | the rule that made them.
-  surveyName :: r -> String
+  -- | why survey findings print as bare lines rather than grouped
+  -- | under the rule that made them.
+  surveyName :: r -> RuleId
 
 instance SurveyLike PackageRule PackageSurvey where
   surveyDisabled (PackageRule r) = r.disabled
@@ -214,7 +216,7 @@ kept r finding = not (Array.any (\ex -> ex.appliesTo finding.subject) (surveyExc
 notExempt :: ∀ r s. SurveyLike r s => Exemptions -> r -> SurveyFinding -> Boolean
 notExempt exemptions r finding = not
   ( Exemptions.matches exemptions
-      { rule: surveyName r
+      { rule: unwrap (surveyName r)
       , moduleName: subjectName finding.subject
       , path: ""
       , declarationName: subjectDeclaration finding.subject

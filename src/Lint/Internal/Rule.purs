@@ -14,6 +14,7 @@ module Lint.Internal.Rule
   , ModuleRule
   , Finding
   , Grouped
+  , RuleId(..)
   , RuleInfo
   , RuleOutcome
   , ruleInfo
@@ -45,6 +46,8 @@ import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty (fromArray, toArray) as NEA
 import Data.Maybe (Maybe(..))
 import Data.Maybe (maybe) as Maybe
+import Data.Newtype (class Newtype)
+import Data.Newtype (unwrap) as Newtype
 import Lint.Internal.Exemptions (Exemptions)
 import Lint.Internal.Exemptions as Exemptions
 import Node.Path (FilePath)
@@ -302,7 +305,7 @@ ruleInfoOf
      }
   -> RuleInfo
 ruleInfoOf lint =
-  { name: lint.name
+  { name: RuleId lint.name
   , description: lint.description
   , examples: map printed lint.examples
   }
@@ -313,10 +316,19 @@ ruleInfoOf lint =
     , bad: examples.bad
     }
 
+-- | Which rule. One rule's identity, and the only handle anything
+-- | outside the engine has on a particular rule.
+newtype RuleId = RuleId String
+
+derive instance Newtype RuleId _
+derive newtype instance Eq RuleId
+derive newtype instance Ord RuleId
+derive newtype instance Show RuleId
+
 -- | A rule's own description of itself, carried alongside anything it
 -- | finds so the report can say which rule spoke and what it wants.
 type RuleInfo =
-  { name :: String
+  { name :: RuleId
   , description :: String
   , examples ::
       Maybe
@@ -371,7 +383,7 @@ runRules exemptions context rules initial =
   let
     applyOne acc { groups, rule: r }
       | ruleDisabled r = acc
-      | exemptHere exemptions context (ruleInfo r).name = acc
+      | exemptHere exemptions context (Newtype.unwrap (ruleInfo r).name) = acc
       | otherwise =
           case skipWhen { exemptions: ruleExclude r, check: ruleCheck r } context acc.result of
             Passed -> acc

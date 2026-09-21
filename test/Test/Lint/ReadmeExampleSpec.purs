@@ -4,11 +4,11 @@ import Prelude
 
 import Data.Array (concatMap) as Array
 import Data.Maybe (Maybe(..))
+import Lint.Internal.Exemptions (noExemptions)
+import Lint.Internal.Rule (DeclarationRule, LintContext, ModuleKind(..), perDecl, runRules)
 import Partial.Unsafe (unsafeCrashWith)
 import PureScript.CST (RecoveredParserResult(..), parseModule)
 import PureScript.CST.Types (Declaration, Module(..), ModuleBody(..)) as CST
-import Lint.Internal.Exemptions (noExemptions)
-import Lint.Internal.Rule (DeclarationRule, LintContext, ModuleKind(..), perDecl, runRules)
 import Test.Lint.ReadmeExample (arityRule, arityUnlessGenerated, maxFunctionArity)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)

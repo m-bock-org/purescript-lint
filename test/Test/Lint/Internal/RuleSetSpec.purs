@@ -4,6 +4,7 @@ import Prelude
 
 import Data.Array (length) as Array
 import Data.Maybe (Maybe(..))
+import Lint.Internal.RuleSet (flattenRules, group, rule)
 import Lint.Rule
   ( DeclarationLint
   , ExprLint
@@ -13,7 +14,6 @@ import Lint.Rule
   , perModule_
   , violations
   )
-import Lint.Internal.RuleSet (flattenRules, group, rule)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
