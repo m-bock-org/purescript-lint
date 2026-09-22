@@ -1,20 +1,39 @@
-# CI, on gaia.
+# CI, on a hosted runner, with npm.
 #
-# One job, one command, and the command is nix. What a pull request must
-# pass is `nix flake check` - the same derivations, built the same way,
-# whether nix runs them here or on your machine. Nothing routes through
-# the justfile: a developer runner is allowed to be fast and stateful,
-# and neither is a property CI should depend on.
+# **This repository is public, and a public repository does not get to
+# need a private one to build.** Until now the check was
+# `nix flake check` on our own machine, which pulled in al-dente - the
+# fleet's private build library - through an `ssh://` flake input. Three
+# consequences, all of them paid for:
 #
-# This file is meant to be identical in every repository. If a repo
-# needs something else checked, that belongs in its flake as another
-# check, not as another step here.
+#   1. Nobody outside the organisation could run the check at all. For
+#      a package published on Pursuit that is the wrong way round.
+#   2. The one runner that serves public repositories carries no key,
+#      deliberately - a fork's pull request reaches it, and handing that
+#      code a key to private repositories is what the arrangement exists
+#      to prevent. So the check could not pass there, and it did not:
+#      `Host key verification failed`, on every run whose al-dente
+#      revision had left the store.
+#   3. Which machine ran a job decided whether it passed, because both
+#      of our runners answered to the same label. That is not a check,
+#      that is a coin.
 #
-# `runs-on: gaia` rather than a hosted runner, because gaia already has
-# the nix store this repository builds against and the key its private
-# flake inputs are fetched with. A hosted runner has neither: it spent
-# every run compiling the package set from source, several hundred
-# modules, before reaching the first line of this repository's code.
+# So: `ubuntu-latest`, and the toolchain from `package.json`, which
+# already carries `purescript`, `spago` and `purs-tidy` - the justfile
+# says it does so "because CI installs them with npm", which was true
+# before and is true again.
+#
+# What is lost, said plainly: the house lint does not run here. The
+# linter is `purescript-lint-regulator`, which is private, so a public
+# repository cannot gate on it without the dependency this file exists
+# to remove. ghost-buster still lints this repository nightly from a
+# machine that has access, and opens a pull request when it finds
+# something - so the coverage is nightly rather than per-commit.
+#
+# `flake.nix` stays. It is how we work locally, and it is faster than
+# this by a wide margin because al-dente has already built the package
+# set. It is simply not what a stranger, or a keyless runner, has to
+# reach for.
 name: check
 
 on:
@@ -22,22 +41,29 @@ on:
   push:
     branches: [ main ]
 
-# A second push to the same branch cancels the first. CI here is a
-# minute of a machine that has other jobs, not an unbounded queue.
 concurrency:
   group: check-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   check:
-    runs-on: [ self-hosted, gaia ]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      # One repository builds at a time across all of them. GitHub's
-      # `concurrency` is per-repository, so without this the machine
-      # can take a compile from every repository at once - and it has
-      # 3.8G, which is one purs and no second one. The lock is held for
-      # the build, not the queue, so waiting costs a listener and not
-      # memory.
-      - run: flock -w 3600 /tmp/gaia-ci.lock nix flake check -L
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # `npm ci`, not `npm install`: the lockfile is the pin, and a
+      # compiler that drifts between runs is a check that drifts.
+      - run: npm ci
+
+      - run: npx spago build
+
+      - run: npx spago test
+
+      # The formatter, as a gate rather than as advice. `just format` is
+      # the same binary, and this is the one place it is checked.
+      - run: npx purs-tidy check 'src/**/*.purs' 'test/**/*.purs'
