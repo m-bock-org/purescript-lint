@@ -13,16 +13,16 @@ import Data.Maybe (Maybe(..))
 import Effect.Class (liftEffect)
 import Effect.Ref as Ref
 import Lint (runLinter, runLinterWith)
-import Lint.Internal.Exemptions as Exemptions
 import Lint.Fix (guidanceFor, outcomeLine)
 import Lint.Fix as Fix
-import Lint.Rule (ModuleLint, fixed, perDecl, perModule)
+import Lint.Internal.Exemptions as Exemptions
+import Lint.Rule (ModuleLint, RuleId(..), fixed, perDecl, perModule)
 import Lint.RuleSet (Rule)
 import Lint.RuleSet as RuleSet
-import Test.Lint.ReadmeExample (maxFunctionArity)
 import Node.Encoding (Encoding(..))
 import Node.FS.Aff as FS
 import Node.FS.Stats as Stats
+import Test.Lint.ReadmeExample (maxFunctionArity)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (fail, shouldEqual)
 
@@ -30,15 +30,15 @@ spec :: Spec Unit
 spec = do
   describe "guidance" do
     it "is found by rule name" do
-      guidanceFor table "max-function-arity" `shouldEqual` Just "give it fewer arguments"
+      guidanceFor table (RuleId "max-function-arity") `shouldEqual` Just "give it fewer arguments"
     it "and a rule with no entry is not this service's to fix" do
-      guidanceFor table "no-where-clauses" `shouldEqual` Nothing
+      guidanceFor table (RuleId "no-where-clauses") `shouldEqual` Nothing
 
   describe "outcomeLine" do
     it "says what was fixed" do
-      outcomeLine "r" "M" Fix.Fixed `shouldEqual` "fixed r in M"
+      outcomeLine (RuleId "r") "M" Fix.Fixed `shouldEqual` "fixed r in M"
     it "and why it was not" do
-      outcomeLine "r" "M" (Fix.Declined "no") `shouldEqual` "r in M - no"
+      outcomeLine (RuleId "r") "M" (Fix.Declined "no") `shouldEqual` "r in M - no"
 
   describe "fixWorkspace" do
     it "puts the source back when a proposal is rejected" do
@@ -136,7 +136,7 @@ spec = do
 
 -- | Private.
 table :: Array Fix.Guidance
-table = [ { rule: "max-function-arity", says: "give it fewer arguments" } ]
+table = [ { rule: RuleId "max-function-arity", says: "give it fewer arguments" } ]
 
 -- | attempt.
 -- |
@@ -164,7 +164,6 @@ alwaysRewrites =
 -- | Private.
 thisFile :: String
 thisFile = "test/Test/Lint/FixSpec.purs"
-
 
 --
 -- `spec`

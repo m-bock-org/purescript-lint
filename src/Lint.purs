@@ -19,13 +19,15 @@ import Data.Either (Either(..))
 import Data.Foldable (fold, for_, sum)
 import Data.Maybe (Maybe(..))
 import Data.Maybe (fromMaybe, isJust, isNothing) as Maybe
+import Data.Newtype (unwrap)
 import Data.String.Common (joinWith, split) as Str
 import Data.String.Pattern (Pattern(..))
 import Data.Traversable (for)
 import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff)
-import Effect.Aff (error, throwError) as Aff
+import Effect.Aff (attempt, error, throwError) as Aff
 import Effect.Class.Console (log)
+import Effect.Exception (message) as Exc
 import Lint.Fix (FixConfig)
 import Lint.Fix as Fix
 import Lint.Internal.Exemptions (Exemptions)
@@ -220,7 +222,7 @@ attemptRound
   -> Aff (Step { left :: Int, broke :: Array String } Fix.Outcome)
 attemptRound options fix rules before one was state = do
   proposed <- fix.propose
-    { rule: one.finding.rule.name
+    { rule: unwrap one.finding.rule.name
     , moduleName: one.moduleName
     , path: one.path
     , message: one.finding.message
@@ -239,8 +241,7 @@ attemptRound options fix rules before one was state = do
 -- |
 -- | Two gates, cheapest first. The re-lint is a parse of the workspace;
 -- | that has already earned it.
--- | Private, depth 5. Used only by `attemptRound`. Uses `lintWorkspace`, `same`, `newFindings`,
--- | `describe`, `verified`.
+-- | Private, depth 5. Used only by `attemptRound`. Uses `lintWorkspace`, `assessed`.
 judge
   :: LintOptions
   -> Fix.FixConfig
@@ -252,10 +253,56 @@ judge
   -> Aff { outcome :: Fix.Outcome, broke :: Array String }
 judge options fix rules before one was text = do
   FS.writeTextFile UTF8 one.path text
-  after <- lintWorkspace options rules
+  relinted <- Aff.attempt (lintWorkspace options rules)
+  case relinted of
+    Left err -> do
+      FS.writeTextFile UTF8 one.path was
+      pure
+        { outcome: Fix.Declined "it does not parse"
+        , broke: [ Exc.message err ]
+        }
+    Right after -> assessed options fix before one was after
+
+-- |
+-- | **The new-findings check is workspace-wide, and used not to be.**
+-- | whose consequences landed in *other* modules passed the judge
+-- | silently. The first pull request ghost-buster ever opened is the
+-- | example: two `explicit-imports` fixes, both correct-looking, both
+-- | kept - and the repository went from 799 findings to 971. An open
+-- | reachable through that open import starts firing somewhere else.
+-- | No rule notices in the module that changed, because the change was
+-- | right there.
+-- |
+-- | Only one file is written per attempt, so a finding that appears
+-- | anywhere in the workspace is attributable to that file. Comparing
+-- | against the whole of `before` costs nothing and is the honest
+-- | question: did this fix make the repository worse.
+-- |
+-- | Split out of `judge` so the re-lint can be attempted rather than
+-- | trusted. A proposal that does not parse used to take the whole run
+-- | down: `lintWorkspace` throws out of `Aff`, so the original source
+-- | was never restored and the findings still queued behind it were
+-- | never attempted. One unparseable proposal out of six cost the
+-- | other five.
+-- |
+-- | A parse failure is fed back as `broke`, not just reverted, because
+-- | it is the most correctable mistake a proposer makes - `import Data.
+-- | Variant as V (Variant, tag)` puts the alias before the import list
+-- | and is a round of the retry loop away from right. `verify`'s
+-- | failures already work this way; parsing had no such path because
+-- | nothing expected it to fail.
+-- | Private, depth 6. Used only by `judge`. Uses `same`, `newFindings`, `describe`, `verified`.
+assessed
+  :: LintOptions
+  -> Fix.FixConfig
+  -> Array Located
+  -> Located
+  -> String
+  -> LintReport
+  -> Aff { outcome :: Fix.Outcome, broke :: Array String }
+assessed _ fix before one was after = do
   let here = Array.filter (\a -> a.moduleName == one.moduleName) after.located
-  let wasHere = Array.filter (\a -> a.moduleName == one.moduleName) before
-  let started = Array.filter (\a -> not (Array.any (same a) wasHere)) here
+  let started = Array.filter (\a -> not (Array.any (same a) before)) after.located
   if Array.any (same one) here then do
     FS.writeTextFile UTF8 one.path was
     pure { outcome: Fix.Declined "the finding is still there", broke: [] }
@@ -275,7 +322,7 @@ judge options fix rules before one was text = do
 
 -- |
 -- | No `verify` configured means nothing to fail, not nothing to run.
--- | Private, depth 6. Used only by `judge`.
+-- | Private, depth 7. Used only by `assessed`.
 verified :: Fix.FixConfig -> Aff (Either String Unit)
 verified fix = case fix.verify of
   Nothing -> pure (Right unit)
@@ -286,19 +333,19 @@ verified fix = case fix.verify of
 -- | person reads to decide whether a proposal was close or nowhere
 -- | near, and two rules that answer each other show up here as a pair -
 -- | which a count hides.
--- | Private, depth 6. Used only by `judge`. Uses `describe`.
+-- | Private, depth 7. Used only by `assessed`. Uses `describe`.
 newFindings :: Array Located -> String
 newFindings started = case started of
   [ only ] -> "a new finding, " <> describe only
   _ ->
     show (Array.length started) <> " new findings: "
-      <> Str.joinWith ", " (Array.nub (map (\a -> a.finding.rule.name) started))
+      <> Str.joinWith ", " (Array.nub (map (\a -> unwrap a.finding.rule.name) started))
 
 -- | Private.
 describe :: Located -> String
-describe one = one.finding.rule.name <> ": " <> one.finding.message
+describe one = unwrap one.finding.rule.name <> ": " <> one.finding.message
 
--- | Private, depth 6. Used only by `judge`.
+-- | Private, depth 7. Used only by `assessed`.
 same :: Located -> Located -> Boolean
 same a b =
   a.moduleName == b.moduleName
@@ -384,7 +431,7 @@ printByRule located =
       log ""
       log
         ( "● " <> Str.joinWith " » "
-            (Array.snoc (NEA.head group).finding.groups rule.name)
+            (Array.snoc (NEA.head group).finding.groups (unwrap rule.name))
         )
       log ("    " <> rule.description)
       for_ sharedHint \h -> log ("    hint: " <> h)

@@ -13,8 +13,6 @@ import Data.Array as Array
 import Data.Maybe (Maybe(..))
 import Data.String (Pattern(..))
 import Data.String (contains) as Str
-import PureScript.CST.Types (Declaration(..), Ident(..), Name(..))
-import PureScript.CST.Types (Declaration) as CST
 import Lint.Rule
   ( DeclarationLint
   , DeclarationRule
@@ -23,6 +21,8 @@ import Lint.Rule
   , perDecl
   , violations
   )
+import PureScript.CST.Types (Declaration(..), Ident(..), Name(..))
+import PureScript.CST.Types (Declaration) as CST
 
 maxFunctionArity :: DeclarationLint Int
 maxFunctionArity =
