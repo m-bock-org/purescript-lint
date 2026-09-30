@@ -237,8 +237,7 @@ attemptRound options fix rules before one was state = do
 -- |
 -- | Two gates, cheapest first. The re-lint is a parse of the workspace;
 -- | that has already earned it.
--- | Private, depth 5. Used only by `attemptRound`. Uses `lintWorkspace`, `same`, `newFindings`,
--- | `describe`, `verified`.
+-- | Private, depth 5. Used only by `attemptRound`. Uses `lintWorkspace`, `assessed`.
 judge
   :: LintOptions
   -> Fix.FixConfig
@@ -260,17 +259,12 @@ judge options fix rules before one was text = do
         }
     Right after -> assessed options fix before one was after
 
--- | Private, depth 6. Used only by `judge`. Uses `same`, `newFindings`,
--- | `describe`, `verified`.
 -- |
 -- | **The new-findings check is workspace-wide, and used not to be.**
--- | `started` was computed against the target module alone, so a fix
 -- | whose consequences landed in *other* modules passed the judge
 -- | silently. The first pull request ghost-buster ever opened is the
 -- | example: two `explicit-imports` fixes, both correct-looking, both
 -- | kept - and the repository went from 799 findings to 971. An open
--- | `import Node.Process as Process` imports everything; naming
--- | `exit'` un-imports the rest, and every export that was only
 -- | reachable through that open import starts firing somewhere else.
 -- | No rule notices in the module that changed, because the change was
 -- | right there.
@@ -293,6 +287,7 @@ judge options fix rules before one was text = do
 -- | and is a round of the retry loop away from right. `verify`'s
 -- | failures already work this way; parsing had no such path because
 -- | nothing expected it to fail.
+-- | Private, depth 6. Used only by `judge`. Uses `same`, `newFindings`, `describe`, `verified`.
 assessed
   :: LintOptions
   -> Fix.FixConfig
@@ -323,7 +318,7 @@ assessed _ fix before one was after = do
 
 -- |
 -- | No `verify` configured means nothing to fail, not nothing to run.
--- | Private, depth 6. Used only by `judge`.
+-- | Private, depth 7. Used only by `assessed`.
 verified :: Fix.FixConfig -> Aff (Either String Unit)
 verified fix = case fix.verify of
   Nothing -> pure (Right unit)
@@ -334,7 +329,7 @@ verified fix = case fix.verify of
 -- | person reads to decide whether a proposal was close or nowhere
 -- | near, and two rules that answer each other show up here as a pair -
 -- | which a count hides.
--- | Private, depth 6. Used only by `judge`. Uses `describe`.
+-- | Private, depth 7. Used only by `assessed`. Uses `describe`.
 newFindings :: Array Located -> String
 newFindings started = case started of
   [ only ] -> "a new finding, " <> describe only
@@ -346,7 +341,7 @@ newFindings started = case started of
 describe :: Located -> String
 describe one = unwrap one.finding.rule.name <> ": " <> one.finding.message
 
--- | Private, depth 6. Used only by `judge`.
+-- | Private, depth 7. Used only by `assessed`.
 same :: Located -> Located -> Boolean
 same a b =
   a.moduleName == b.moduleName
