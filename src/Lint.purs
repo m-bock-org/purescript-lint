@@ -4,6 +4,7 @@ module Lint
   , Located
   , Rewrite
   , lintWorkspace
+  , lintWorkspaceIn
   , oldestFirst
   , recordedIn
   , rewriteDecls
@@ -78,13 +79,14 @@ runLinter = runLinterWith { skipModules: [], fix: Nothing, standing: Exemptions.
 -- | Uses `lintWorkspace`, `applyRewrites`, `fixWorkspace`, `printByRule`, `printSummary`.
 runLinterWith :: LintOptions -> Array Rule -> Aff Boolean
 runLinterWith options rules = do
+  workspace <- Workspace.getWorkspace
   case options.fix of
     Nothing -> pure unit
     Just fix -> do
-      before <- lintWorkspace options rules
+      before <- lintWorkspaceIn workspace options rules
       applyRewrites before.rewrites
-      void (fixWorkspace options fix rules)
-  report <- lintWorkspace options rules
+      void (fixWorkspace workspace options fix rules)
+  report <- lintWorkspaceIn workspace options rules
   printByRule report.located
   printSummary report.total (Array.length (Array.nub (map _.moduleName report.located)))
     report.moduleCount
@@ -102,8 +104,18 @@ runLinterWith options rules = do
 -- | derived from the array's length.
 -- | Uses `readOrFail`, `lintModule`, `reportSurvey`.
 lintWorkspace :: LintOptions -> Array Rule -> Aff LintReport
-lintWorkspace { skipModules, standing } rules = do
+lintWorkspace options rules = do
   workspace <- Workspace.getWorkspace
+  lintWorkspaceIn workspace options rules
+
+-- | The same, over a workspace already asked for. Asking spago is a
+-- | process start, some hundreds of milliseconds, and a fix loop lints
+-- | after every proposal - so a run asks once and passes the answer
+-- | down; what changes between lints is the files, never which
+-- | packages there are.
+-- | Uses `readOrFail`, `lintModule`, `reportSurvey`.
+lintWorkspaceIn :: Workspace.Workspace -> LintOptions -> Array Rule -> Aff LintReport
+lintWorkspaceIn workspace { skipModules, standing } rules = do
   exemptions <- readOrFail standing workspace
   let
     flatRules = flattenRules rules
@@ -171,10 +183,9 @@ applyRewrites rewrites = do
 
 -- | Private, depth 2. Used only by `runLinterWith`. Uses `lintWorkspace`, `sameModule`,
 -- | `hasGuidance`, `attemptOne`.
-fixWorkspace :: LintOptions -> FixConfig -> Array Rule -> Aff Int
-fixWorkspace options fix rules = do
-  report <- lintWorkspace options rules
-  workspace <- Workspace.getWorkspace
+fixWorkspace :: Workspace.Workspace -> LintOptions -> FixConfig -> Array Rule -> Aff Int
+fixWorkspace workspace options fix rules = do
+  report <- lintWorkspaceIn workspace options rules
   recorded <- readOrFail Exemptions.All workspace
   let
     mine = Array.take fix.limit
@@ -190,7 +201,7 @@ fixWorkspace options fix rules = do
         ]
     )
   fixes <- for mine \one -> do
-    outcome <- attemptOne options fix rules report.located one
+    outcome <- attemptOne workspace options fix rules report.located one
     log ("  " <> Fix.outcomeLine one.finding.rule.name one.moduleName outcome <> recordedIn recorded one)
     pure (if outcome == Fix.Fixed then 1 else 0)
   pure (sum fixes)
@@ -253,19 +264,21 @@ sameModule a b = a.moduleName == b.moduleName
 
 -- | Private, depth 3. Used only by `fixWorkspace`. Uses `attemptRound`.
 attemptOne
-  :: LintOptions
+  :: Workspace.Workspace
+  -> LintOptions
   -> FixConfig
   -> Array Rule
   -> Array Located
   -> Located
   -> Aff Fix.Outcome
-attemptOne options fix rules before one = do
+attemptOne workspace options fix rules before one = do
   was <- FS.readTextFile UTF8 one.path
-  tailRecM (attemptRound options fix rules before one was) { left: fix.rounds, broke: [] }
+  tailRecM (attemptRound workspace options fix rules before one was) { left: fix.rounds, broke: [] }
 
 -- | Private, depth 4. Used only by `attemptOne`. Uses `judge`.
 attemptRound
-  :: LintOptions
+  :: Workspace.Workspace
+  -> LintOptions
   -> FixConfig
   -> Array Rule
   -> Array Located
@@ -273,7 +286,7 @@ attemptRound
   -> String
   -> { left :: Int, broke :: Array String }
   -> Aff (Step { left :: Int, broke :: Array String } Fix.Outcome)
-attemptRound options fix rules before one was state = do
+attemptRound workspace options fix rules before one was state = do
   proposed <- fix.propose
     { rule: unwrap one.finding.rule.name
     , moduleName: one.moduleName
@@ -286,7 +299,7 @@ attemptRound options fix rules before one was state = do
   case proposed of
     Left why -> pure (Done (Fix.Declined why))
     Right text -> do
-      judged <- judge options fix rules before one was text
+      judged <- judge workspace options fix rules before one was text
       if state.left > 1 && not (Array.null judged.broke) then
         pure (Loop { left: state.left - 1, broke: judged.broke })
       else pure (Done judged.outcome)
@@ -296,7 +309,8 @@ attemptRound options fix rules before one was state = do
 -- | that has already earned it.
 -- | Private, depth 5. Used only by `attemptRound`. Uses `lintWorkspace`, `assessed`.
 judge
-  :: LintOptions
+  :: Workspace.Workspace
+  -> LintOptions
   -> Fix.FixConfig
   -> Array Rule
   -> Array Located
@@ -304,9 +318,9 @@ judge
   -> String
   -> String
   -> Aff { outcome :: Fix.Outcome, broke :: Array String }
-judge options fix rules before one was text = do
+judge workspace options fix rules before one was text = do
   FS.writeTextFile UTF8 one.path text
-  relinted <- Aff.attempt (lintWorkspace options rules)
+  relinted <- Aff.attempt (lintWorkspaceIn workspace options rules)
   case relinted of
     Left err -> do
       FS.writeTextFile UTF8 one.path was
