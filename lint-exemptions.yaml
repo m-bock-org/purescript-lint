@@ -1,41 +1,36 @@
-# Where a rule does not apply, and why. `by-design` is a decision
-# and stands; `backlog` is work nobody has done yet, which is what
-# a fixer is for and what a nightly may take.
+# What lint-purs is not in step with, and why. This file reaches
+# this package's modules and no other's; the workspace root has
+# its own for what spans packages.
 exemptions:
-
   - rule: facade-layout
     modules:
       - Lint.Rule.Survey
       - Lint.RuleSet.Do
     kind: by-design
+    since: ""
     why: >
-      Both are public and deliberately two segments deep:
-      Lint.Rule.Survey is the survey half of Lint.Rule and belongs
-      beside it, and Lint.RuleSet.Do is the do-notation for
-      Lint.RuleSet. Moving either under .Internal would hide something
-      callers are meant to import.
-
+      Both are public and deliberately two segments deep: Lint.Rule.Survey is the survey half of
+      Lint.Rule and belongs beside it, and Lint.RuleSet.Do is the do-notation for Lint.RuleSet.
+      Moving either under .Internal would hide something callers are meant to import.
   - rule: encode-decode-signature
     modules:
       - Lint.Internal.Exemptions
       - Lint.Internal.Spago
     kind: by-design
+    since: ""
     why: >
-      Decoders named for what they decode - decodeSpagoPkg, decodeExempt
-      - which already have the DecodeJson shape the rule wants. The rule
-      is matching on the name.
-
+      Decoders named for what they decode - decodeSpagoPkg, decodeExempt - which already have the
+      DecodeJson shape the rule wants. The rule is matching on the name.
   - rule: no-duplicate-record-shape
     modules:
       - Lint.Internal.Exemptions
       - Test.Lint.ExemptionsSpec
       - Lint
     kind: by-design
+    since: ""
     why: >
-      The exemption subject record is spelled out in the matcher and
-      again in its specs. Naming it would put a type in the public
-      interface that exists only to be matched against.
-
+      The exemption subject record is spelled out in the matcher and again in its specs. Naming it
+      would put a type in the public interface that exists only to be matched against.
   - rule: combinator-atoms
     modules:
       - Lint.Internal.Exemptions
@@ -44,49 +39,43 @@ exemptions:
       - Lint
       - Lint.Internal.Dedent
     kind: by-design
+    since: ""
     why: >
-      UNREVIEWED RULE. Added 2026-09-02 and registered Unreviewed.
-      Whether it earns its place is undecided, and holding this
-      repository to it before that decision is backwards.
-
+      UNREVIEWED RULE. Added 2026-09-02 and registered Unreviewed. Whether it earns its place is
+      undecided, and holding this repository to it before that decision is backwards.
   - rule: combinator-one-line
     modules:
       - Lint.Internal.Exemptions
       - Lint.Internal.Rule
     kind: by-design
-    why: >
-      UNREVIEWED. The weaker half of combinator-atoms; the same decision
-      is pending.
-
+    since: ""
+    why: |
+      UNREVIEWED. The weaker half of combinator-atoms; the same decision is pending.
   - rule: case-arm-layout
     modules:
       - Lint.Internal.Exemptions
       - Lint.Internal.RuleSet
       - Lint.Internal.Spago
     kind: by-design
+    since: ""
     why: >
-      UNREVIEWED RULE. Added 2026-09-02. The findings are real - the
-      arms genuinely disagree - but the rule has not been reviewed and
-      this repository should not be the first thing held to it.
-
+      UNREVIEWED RULE. Added 2026-09-02. The findings are real - the arms genuinely disagree - but
+      the rule has not been reviewed and this repository should not be the first thing held to it.
   - rule: comment-policy
     modules:
       - Lint.Internal.Exemptions
       - Test.Lint.ExemptionsSpec
       - Lint.Internal.Dedent
     kind: by-design
+    since: ""
     why: >
-      Trailing Context blocks, which the public set forbids because that
-      convention is this workspace's and a stranger never agreed to it.
-      The prose belongs in doc comments on the declarations it
-      describes - and moving it there is a judgement per paragraph, not
-      a rewrite. `by-design` rather than `backlog` because the fixer
-      honours only `by-design`: a `backlog` entry is an invitation for
-      the nightly to relocate this prose, and the relocator splits a
-      block by line, so a sentence sharing a line with a generated one
-      is dropped. That cost notary 13 sentences and encode-decode 9,
-      on two consecutive nights, before anyone noticed.
-
+      Trailing Context blocks, which the public set forbids because that convention is this
+      workspace's and a stranger never agreed to it. The prose belongs in doc comments on the
+      declarations it describes - and moving it there is a judgement per paragraph, not a rewrite.
+      `by-design` rather than `backlog` because the fixer honours only `by-design`: a `backlog`
+      entry is an invitation for the nightly to relocate this prose, and the relocator splits a
+      block by line, so a sentence sharing a line with a generated one is dropped. That cost notary
+      13 sentences and encode-decode 9, on two consecutive nights, before anyone noticed.
   - rule: single-line-signature
     modules:
       - Lint
@@ -97,9 +86,8 @@ exemptions:
     kind: backlog
     since: "2026-09-19"
     why: >
-      Signatures with several constrained type variables that do not fit
-      on one line. The fix is usually a named type alias.
-
+      Signatures with several constrained type variables that do not fit on one line. The fix is
+      usually a named type alias.
   - rule: max-delimiter-run
     modules:
       - Lint
@@ -108,10 +96,8 @@ exemptions:
       - Test.Lint.ReadmeExampleSpec
     kind: backlog
     since: "2026-09-19"
-    why: >
-      Nested brackets past the limit, mostly record literals and test
-      fixtures.
-
+    why: |
+      Nested brackets past the limit, mostly record literals and test fixtures.
   - rule: max-line-length
     modules:
       - Lint.Internal.Exemptions
@@ -120,115 +106,497 @@ exemptions:
     kind: backlog
     since: "2026-09-19"
     why: no reason was recorded for this one
-
   - rule: no-same-kind-block-nesting
     modules:
       - Lint.Internal.Exemptions
       - Lint
     kind: backlog
     since: "2026-09-19"
-    why: >
+    why: |
       A case inside a case in the module matcher.
-
   - rule: no-bare-either-hush
     modules:
       - Lint.Internal.Spago
     kind: by-design
+    since: ""
     why: >
-      `hushBecause` lives in `data-either-reasoned`, which is a git
-      dependency, and this package publishes to the registry - a
-      published package cannot take one. The rule is right and its fix
+      `hushBecause` lives in `data-either-reasoned`, which is a git dependency, and this package
+      publishes to the registry - a published package cannot take one. The rule is right and its fix
       is unavailable here, which is a decision rather than a debt.
-
   - rule: max-function-arity
     modules:
       - Lint
       - Lint.Internal.Rule
     kind: backlog
     since: "2026-09-19"
-    why: >
-      Two functions past the limit; both want their arguments grouped
-      into a record.
-
+    why: |
+      Two functions past the limit; both want their arguments grouped into a record.
   - rule: max-call-stack-depth
     modules:
       - Lint
     kind: backlog
     since: "2026-09-19"
-    why: >
-      The fix loop threads options, rules and exemptions through four
-      frames. Worth restructuring.
-
+    why: |
+      The fix loop threads options, rules and exemptions through four frames. Worth restructuring.
   - rule: no-stuttering-name
     modules:
       - Lint
     kind: backlog
     since: "2026-09-19"
-    why: >
+    why: |
       One name repeating its module.
-
   - rule: constant-escape-arm
     modules:
       - Lint
     kind: by-design
+    since: ""
     why: >
-      UNREVIEWED PAIR. The counterweight to combinator-atoms, which is
-      itself unreviewed; adopting one without the other pushes code in a
-      direction the other pushes back from.
-
+      UNREVIEWED PAIR. The counterweight to combinator-atoms, which is itself unreviewed; adopting
+      one without the other pushes code in a direction the other pushes back from.
   - rule: comment-policy
     modules:
       - Test.Lint.FixSpec
     kind: by-design
+    since: ""
     why: >
-      A spec whose prose sits in trailing blocks. Specs are read by
-      whoever changes them, and this one earns its explanation - it took
-      four attempts to become a test that could fail. `by-design` for
-      the same reason as the entry above: `backlog` would hand this
-      paragraph to the nightly relocator, which drops a sentence that
-      shares a line with a generated one.
-
+      A spec whose prose sits in trailing blocks. Specs are read by whoever changes them, and this
+      one earns its explanation - it took four attempts to become a test that could fail.
+      `by-design` for the same reason as the entry above: `backlog` would hand this paragraph to the
+      nightly relocator, which drops a sentence that shares a line with a generated one.
   - rule: declaration-notes
     modules:
       - "*"
     kind: by-design
+    since: ""
     why: >
-      Michael ended generated declaration notes on 2026-09-16: comments
-      are banned except section comments, and the house fixer deletes
-      `-- | Private, depth N. Used only by X.` rather than maintaining
-      it. This repository pins the regulator at 17abc2b, which predates
-      that decision and still writes those notes - so the nightly has
-      been keeping 141 of them up to date. ghost-buster/2026-09-18-0210
-      is one night of it, and it moved the count from 227 to 228.
-      Off here until the pin moves past the decision, at which point
-      this entry goes and the notes go with it.
-
+      Michael ended generated declaration notes on 2026-09-16: comments are banned except section
+      comments, and the house fixer deletes `-- | Private, depth N. Used only by X.` rather than
+      maintaining it. This repository pins the regulator at 17abc2b, which predates that decision
+      and still writes those notes - so the nightly has been keeping 141 of them up to date.
+      ghost-buster/2026-09-18-0210 is one night of it, and it moved the count from 227 to 228. Off
+      here until the pin moves past the decision, at which point this entry goes and the notes go
+      with it.
   - rule: max-do-nesting-depth
     modules:
       - Test.Lint.FixSpec
     kind: backlog
     since: "2026-09-19"
-    why: >
+    why: |
       Nested do blocks in the stubbed proposers.
-
   - rule: no-pure-failure
     modules:
       - Test.Lint.FixSpec
     kind: by-design
+    since: ""
     why: >
-      A spec's stub proposer returns `Left` to mean declining, which is
-      the answer under test rather than a failure being swallowed.
-
+      A spec's stub proposer returns `Left` to mean declining, which is the answer under test rather
+      than a failure being swallowed.
   - rule: no-stuttering-name
     modules:
       - Test.Lint.FixSpec
     kind: backlog
     since: "2026-09-19"
     why: no reason was recorded for this one
-
   - rule: constant-escape-arm
     modules:
       - Test.Lint.FixSpec
     kind: by-design
-    why: >
+    since: ""
+    why: |
       UNREVIEWED PAIR. See the entry for Lint.
+  - rule: max-module-dependency-depth
+    modules:
+      - Test.Lint.Main
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: no-prelude-import
+    modules:
+      - Lint
+      - Lint.Fix
+      - Lint.Internal.Dedent
+      - Lint.Internal.Exemptions
+      - Lint.Internal.Rule
+      - Lint.Internal.Spago
+      - Lint.Internal.Survey
+      - Lint.Internal.Workspace
+      - Lint.RuleSet.Do
+      - Test.Lint.ExemptionsSpec
+      - Test.Lint.FixSpec
+      - Test.Lint.Fixture
+      - Test.Lint.InstanceMembersSpec
+      - Test.Lint.Internal.DedentSpec
+      - Test.Lint.Internal.RuleSetSpec
+      - Test.Lint.Internal.RuleSpec
+      - Test.Lint.Internal.WorkspaceSpec
+      - Test.Lint.Main
+      - Test.Lint.ReadmeExample
+      - Test.Lint.ReadmeExampleSpec
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: test-names-its-subject
+    modules:
+      - Test.Lint.ExemptionsSpec
+      - Test.Lint.FixSpec
+      - Test.Lint.InstanceMembersSpec
+      - Test.Lint.Internal.DedentSpec
+      - Test.Lint.Internal.RuleSetSpec
+      - Test.Lint.Internal.RuleSpec
+      - Test.Lint.Internal.WorkspaceSpec
+      - Test.Lint.ReadmeExample
+      - Test.Lint.ReadmeExampleSpec
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: no-unimported-exports
+    modules:
+      - Lint
+      - Lint.Internal.Rule
+      - Lint.Internal.Survey
+      - Lint.Rule
+      - Lint.Rule.Survey
+      - Lint.RuleSet.Do
+      - Test.Lint.Fixture
+      - Test.Lint.ReadmeExample
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: exposed-modules
+    modules:
+      - Lint.Internal.Exemptions
+      - Lint.Internal.Spago
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: case-arm-layout
+    modules:
+      - Lint
+      - Test.Lint.ExemptionsSpec
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: combinator-one-line
+    modules:
+      - Lint
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: comment-policy
+    modules:
+      - Lint
+      - Lint.Fix
+      - Lint.Internal.Rule
+      - Lint.Internal.RuleSet
+      - Lint.Internal.Spago
+      - Lint.Internal.Survey
+      - Lint.Internal.Workspace
+      - Lint.Internal.Yaml
+      - Lint.Rule
+      - Lint.Rule.Survey
+      - Lint.RuleSet
+      - Lint.RuleSet.Do
+      - Test.Lint.Fixture
+      - Test.Lint.InstanceMembersSpec
+      - Test.Lint.Internal.RuleSetSpec
+      - Test.Lint.Internal.RuleSpec
+      - Test.Lint.ReadmeExample
+      - Test.Lint.ReadmeExampleSpec
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: do-bind-layout
+    modules:
+      - Lint
+      - Lint.Internal.Exemptions
+      - Test.Lint.FixSpec
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: explicit-bind-signatures
+    modules:
+      - Lint
+      - Lint.Internal.Spago
+      - Lint.Internal.Workspace
+      - Test.Lint.FixSpec
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: explicit-imports
+    modules:
+      - Lint
+      - Lint.Internal.Rule
+      - Lint.Internal.Spago
+      - Lint.Internal.Survey
+      - Lint.Internal.Workspace
+      - Test.Lint.FixSpec
+      - Test.Lint.Main
+      - Test.Lint.ReadmeExample
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: explicit-lambda-signatures
+    modules:
+      - Lint
+      - Lint.Fix
+      - Lint.Internal.Dedent
+      - Lint.Internal.Rule
+      - Lint.Internal.Survey
+      - Lint.Internal.Workspace
+      - Test.Lint.FixSpec
+      - Test.Lint.InstanceMembersSpec
+      - Test.Lint.Internal.RuleSetSpec
+      - Test.Lint.Internal.RuleSpec
+      - Test.Lint.ReadmeExample
+      - Test.Lint.ReadmeExampleSpec
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: explicit-let-signatures
+    modules:
+      - Lint
+      - Lint.Internal.Dedent
+      - Lint.Internal.Rule
+      - Lint.Internal.RuleSet
+      - Lint.Internal.Survey
+      - Lint.Internal.Workspace
+      - Lint.Internal.Yaml
+      - Test.Lint.FixSpec
+      - Test.Lint.Internal.RuleSetSpec
+      - Test.Lint.Internal.RuleSpec
+      - Test.Lint.ReadmeExampleSpec
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: inlinable-top-level
+    modules:
+      - Lint
+      - Lint.Internal.Exemptions
+      - Lint.Internal.Rule
+      - Lint.Internal.Spago
+      - Lint.Internal.Survey
+      - Lint.Internal.Workspace
+      - Test.Lint.ExemptionsSpec
+      - Test.Lint.FixSpec
+      - Test.Lint.Fixture
+      - Test.Lint.InstanceMembersSpec
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: max-block-nesting-depth
+    modules:
+      - Lint
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: max-call-stack-depth
+    modules:
+      - Lint.Internal.Exemptions
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: max-decls-per-module
+    modules:
+      - Lint
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: max-do-nesting-depth
+    modules:
+      - Test.Lint.ExemptionsSpec
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: max-line-length
+    modules:
+      - Lint
+      - Lint.Internal.Rule
+      - Test.Lint.ExemptionsSpec
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: module-matches-package
+    modules:
+      - Lint
+      - Lint.Fix
+      - Lint.Internal.Dedent
+      - Lint.Internal.Exemptions
+      - Lint.Internal.Rule
+      - Lint.Internal.RuleSet
+      - Lint.Internal.Spago
+      - Lint.Internal.Survey
+      - Lint.Internal.Workspace
+      - Lint.Internal.Yaml
+      - Lint.Rule
+      - Lint.Rule.Survey
+      - Lint.RuleSet
+      - Lint.RuleSet.Do
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: named-subject
+    modules:
+      - Lint
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: no-data-declarations
+    modules:
+      - Lint.Fix
+      - Lint.Internal.Exemptions
+      - Lint.Internal.Rule
+      - Lint.Internal.RuleSet
+      - Lint.Internal.Spago
+      - Lint.Internal.Survey
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: no-duplicate-record-shape
+    modules:
+      - Lint.Internal.Rule
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: no-let-before-do
+    modules:
+      - Lint.Internal.Workspace
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: no-pure-case
+    modules:
+      - Lint.Internal.Exemptions
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: no-renaming-alias
+    modules:
+      - Lint.Internal.Exemptions
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: no-vague-names
+    modules:
+      - Lint.Internal.Exemptions
+      - Lint.Internal.Survey
+      - Lint.Internal.Yaml
+      - Test.Lint.InstanceMembersSpec
+      - Test.Lint.Internal.RuleSpec
+      - Test.Lint.ReadmeExampleSpec
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: one-line-record-fields
+    modules:
+      - Lint
+      - Lint.Internal.Rule
+      - Lint.Internal.RuleSet
+      - Lint.Internal.Spago
+      - Lint.Internal.Survey
+      - Lint.Internal.Workspace
+      - Test.Lint.ExemptionsSpec
+      - Test.Lint.InstanceMembersSpec
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: record-field-layout
+    modules:
+      - Lint
+      - Test.Lint.ExemptionsSpec
+      - Test.Lint.FixSpec
+      - Test.Lint.Internal.RuleSpec
+      - Test.Lint.ReadmeExample
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: record-type-layout
+    modules:
+      - Lint.Internal.Rule
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: require-qualified-imports
+    modules:
+      - Lint.Internal.Exemptions
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: require-tuple-operator
+    modules:
+      - Lint
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
+  - rule: sinkable-top-level
+    modules:
+      - Lint
+      - Lint.Internal.Exemptions
+    kind: backlog
+    since: "2026-10-04"
+    why: >-
+      A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
+      became a gate. Not a decision: fix it and delete this line.
