@@ -4,6 +4,7 @@ module Lint.Internal.Survey
   , PackageSurvey
   , Subject(..)
   , SubjectExemption
+  , SurveyExemptions
   , SurveyFinding
   , SurveyModule
   , WorkspaceLint
@@ -188,16 +189,21 @@ instance SurveyLike WorkspaceRule WorkspaceSurvey where
   surveyCheck (WorkspaceRule r) = r.check
   surveyName (WorkspaceRule r) = r.name
 
+-- | What answers for a survey finding: the exemptions, and which
+-- | package a finding's subject belongs to, so a package's own file
+-- | can answer for it.
+type SurveyExemptions = { exemptions :: Exemptions, packageOf :: Subject -> String }
+
 -- | Run every survey rule and collect what they found.
 -- | Uses `kept`, `notExempt`.
 runSurveyRules
-  :: ∀ r s. SurveyLike r s => Exemptions -> Array (Grouped r) -> s -> Array String
-runSurveyRules exemptions rules survey =
+  :: ∀ r s. SurveyLike r s => SurveyExemptions -> Array (Grouped r) -> s -> Array String
+runSurveyRules exempting rules survey =
   let
     applyOne { rule: r }
       | surveyDisabled r = []
       | otherwise = map _.message
-          (Array.filter (\f -> kept r f && notExempt exemptions r f) (surveyCheck r survey))
+          (Array.filter (\f -> kept r f && notExempt exempting r f) (surveyCheck r survey))
   in
     Array.concatMap applyOne rules
 
@@ -213,10 +219,11 @@ kept r finding = not (Array.any (\ex -> ex.appliesTo finding.subject) (surveyExc
 -- | a module named there is exempt whichever kind of rule found it,
 -- | and a finding about one declaration answers to `Module#name` too.
 -- | Private. Used only by `runSurveyRules`. Uses `subjectName`, `subjectDeclaration`.
-notExempt :: ∀ r s. SurveyLike r s => Exemptions -> r -> SurveyFinding -> Boolean
-notExempt exemptions r finding = not
+notExempt :: ∀ r s. SurveyLike r s => SurveyExemptions -> r -> SurveyFinding -> Boolean
+notExempt { exemptions, packageOf } r finding = not
   ( Exemptions.matches exemptions
       { rule: unwrap (surveyName r)
+      , packageName: packageOf finding.subject
       , moduleName: subjectName finding.subject
       , path: ""
       , declarationName: subjectDeclaration finding.subject

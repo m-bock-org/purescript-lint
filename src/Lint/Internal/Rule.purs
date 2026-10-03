@@ -355,6 +355,9 @@ type Finding =
   , groups :: Array String
   , message :: String
   , hint :: Maybe String
+  -- | The declaration it is about, when a rule looked at one: what a
+  -- | `Module#name` exemption answers to.
+  , declarationName :: Maybe String
   }
 
 -- | What running rules over one value produced: the value (rewritten if
@@ -370,6 +373,7 @@ type RuleOutcome a = { result :: a, fixed :: Boolean, violations :: Array Findin
 exemptHere :: Exemptions -> LintContext -> String -> Boolean
 exemptHere exemptions context rule = Exemptions.matches exemptions
   { rule
+  , packageName: context.packageName
   , moduleName: context.moduleName
   , path: context.path
   , declarationName: context.declarationName
@@ -378,8 +382,9 @@ exemptHere exemptions context rule = Exemptions.matches exemptions
 -- | Run every rule over one value, threading each rewrite into the next
 -- | One finding, as the report will read it.
 -- | Private. Used only by `runRules`.
-asFinding :: Array String -> RuleInfo -> Maybe String -> String -> Finding
-asFinding groups rule hint message = { rule, groups, message, hint }
+asFinding :: LintContext -> Array String -> RuleInfo -> Maybe String -> String -> Finding
+asFinding context groups rule hint message =
+  { rule, groups, message, hint, declarationName: context.declarationName }
 
 -- | rule's input.
 -- | Uses `exemptHere`, `skipWhen`, `asFinding`.
@@ -401,12 +406,12 @@ runRules exemptions context rules initial =
             Passed -> acc
             Violations found hint -> acc
               { violations =
-                  acc.violations <> map (asFinding groups (ruleInfo r) hint) (NEA.toArray found)
+                  acc.violations <> map (asFinding context groups (ruleInfo r) hint) (NEA.toArray found)
               }
             Fixed result -> acc
               { result = result
               , fixed = true
-              , violations = acc.violations <> [ asFinding groups (ruleInfo r) Nothing rewritable ]
+              , violations = acc.violations <> [ asFinding context groups (ruleInfo r) Nothing rewritable ]
               }
   in
     Array.foldl applyOne { result: initial, fixed: false, violations: [] } rules

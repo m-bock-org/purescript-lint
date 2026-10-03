@@ -1,0 +1,7 @@
+# A workspace of one package, for the specs that run the linter and
+# write. It is materialised under a temporary directory with the real
+# file names; at rest nothing here is called spago.yaml, so spago does
+# not take it for a second workspace.
+workspace:
+  packageSet:
+    registry: 78.0.0

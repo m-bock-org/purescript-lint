@@ -1,4 +1,4 @@
-module Test.Main (main) where
+module Test.Lint.Main (main) where
 
 import Prelude
 

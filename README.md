@@ -224,6 +224,34 @@ one value for one rule, or every rule for a whole module. `ignoreSubjects`
 decides after: a survey rule is handed the workspace in one go, so its
 findings can only be dropped once made, by what each one is about.
 
+Those are a rule set's own exemptions. What a *workspace* has to say about
+itself - this module is generated, that rule does not fit this package -
+is data, in `lint-exemptions.yaml`, so it can be written without depending
+on the engine:
+
+```yaml
+exemptions:
+  - rule: max-function-arity
+    modules:
+      - Acme.Generated.*
+    kind: by-design
+    since: 2026-09-13
+    why: generated code is not ours to shorten
+```
+
+`kind` is `by-design` - a rule that does not apply here and never will -
+or `backlog` - work nobody has done yet, which an ordinary run suppresses
+and a fixer (`standing: ByDesignOnly`) sees as findings, oldest `since`
+first. `modules` matches a name, a prefix with a trailing `*`, or one
+declaration as `Module#name`; `paths` matches the end of a file path.
+
+**One file per package, and one at the root.** A file beside a package's
+`spago.yaml` reaches that package's modules and nothing else, so
+`modules: ["*"]` there means that package. The root's file reaches every
+package; it is where a rule that reports on namespaces, or an entry that
+spans packages, is answered. Every entry remembers which file it came
+from, and a malformed file fails the run naming its path.
+
 ## Running it
 
 <!-- PD_START:purs

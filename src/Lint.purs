@@ -4,6 +4,8 @@ module Lint
   , Located
   , Rewrite
   , lintWorkspace
+  , oldestFirst
+  , recordedIn
   , rewriteDecls
   , runLinter
   , runLinterWith
@@ -42,7 +44,7 @@ import Lint.Internal.Rule
   , runRules
   )
 import Lint.Internal.RuleSet (FlatRules, Rule, flattenRules)
-import Lint.Internal.Survey (PackageSurvey, SurveyModule, runSurveyRules)
+import Lint.Internal.Survey (PackageSurvey, Subject(..), SurveyModule, runSurveyRules)
 import Lint.Internal.Workspace (WorkspaceModule)
 import Lint.Internal.Workspace as Workspace
 import Node.Encoding (Encoding(..))
@@ -101,8 +103,8 @@ runLinterWith options rules = do
 -- | Uses `readOrFail`, `lintModule`, `reportSurvey`.
 lintWorkspace :: LintOptions -> Array Rule -> Aff LintReport
 lintWorkspace { skipModules, standing } rules = do
-  exemptions <- readOrFail standing
   workspace <- Workspace.getWorkspace
+  exemptions <- readOrFail standing workspace
   let
     flatRules = flattenRules rules
     configured = { skipModules, flatRules, exemptions }
@@ -136,9 +138,10 @@ lintWorkspace { skipModules, standing } rules = do
 -- | not: a mistyped file that quietly exempted nothing would be found
 -- | by a rule firing somewhere nobody expected, months later.
 -- | Private. Used only by `lintWorkspace`.
-readOrFail :: Exemptions.Standing -> Aff Exemptions
-readOrFail standing = do
+readOrFail :: Exemptions.Standing -> Workspace.Workspace -> Aff Exemptions
+readOrFail standing workspace = do
   found <- Exemptions.readExemptionsWith standing
+    (map (\package -> { name: package.name, path: package.path }) workspace.packages)
   case found of
     Left why -> Aff.throwError (Aff.error why)
     Right exemptions -> pure exemptions
@@ -171,9 +174,11 @@ applyRewrites rewrites = do
 fixWorkspace :: LintOptions -> FixConfig -> Array Rule -> Aff Int
 fixWorkspace options fix rules = do
   report <- lintWorkspace options rules
+  workspace <- Workspace.getWorkspace
+  recorded <- readOrFail Exemptions.All workspace
   let
     mine = Array.take fix.limit
-      (Array.nubByEq sameModule (Array.filter (hasGuidance fix.guidance) report.located))
+      (Array.nubByEq sameModule (oldestFirst recorded (Array.filter (hasGuidance fix.guidance) report.located)))
   log ""
   log
     ( fold
@@ -186,9 +191,57 @@ fixWorkspace options fix rules = do
     )
   fixes <- for mine \one -> do
     outcome <- attemptOne options fix rules report.located one
-    log ("  " <> Fix.outcomeLine one.finding.rule.name one.moduleName outcome)
+    log ("  " <> Fix.outcomeLine one.finding.rule.name one.moduleName outcome <> recordedIn recorded one)
     pure (if outcome == Fix.Fixed then 1 else 0)
   pure (sum fixes)
+
+-- | Oldest debt first.
+-- |
+-- | A fixer sees the backlog as findings, and `limit` of them per run,
+-- | so which ones it meets first decides what ever gets fixed. The
+-- | order is: a finding no entry covers - which an ordinary run would
+-- | fail on, so it is nobody's debt and everybody's problem - then the
+-- | backlog by its `since`, oldest first, and last the entries that
+-- | never said when they were written, which cannot be ranked and
+-- | should not jump the queue for it.
+-- | Uses `ageOf`.
+oldestFirst :: Exemptions -> Array Located -> Array Located
+oldestFirst recorded = Array.sortWith (ageOf recorded)
+
+-- | What `oldestFirst` sorts on: a rank, then the day. `""` sorts
+-- | before any date, which is what puts an uncovered finding first;
+-- | an undated entry gets the highest rank so it sorts last however
+-- | its empty `since` compares.
+-- | Private. Used only by `oldestFirst`. Uses `coveredBy`.
+ageOf :: Exemptions -> Located -> Tuple Int String
+ageOf recorded one = case coveredBy recorded one of
+  Nothing -> Tuple 0 ""
+  Just entry | entry.since == "" -> Tuple 2 ""
+  Just entry -> Tuple 1 entry.since
+
+-- | Where a finding's debt was recorded, for the line that says what
+-- | became of it: the file, so a reader of the fixer's output can go
+-- | and remove the entry, and the day, so they can see how long it
+-- | waited.
+-- | Uses `coveredBy`.
+recordedIn :: Exemptions -> Located -> String
+recordedIn recorded one = case coveredBy recorded one of
+  Nothing -> ""
+  Just entry -> fold
+    [ " (backlog in "
+    , entry.file
+    , if entry.since == "" then ", undated)" else " since " <> entry.since <> ")"
+    ]
+
+-- | Private. Used only by `ageOf`, `recordedIn`.
+coveredBy :: Exemptions -> Located -> Maybe Exemptions.Exempt
+coveredBy recorded one = Exemptions.backlogCovering recorded
+  { rule: unwrap one.finding.rule.name
+  , packageName: one.packageName
+  , moduleName: one.moduleName
+  , path: one.path
+  , declarationName: one.finding.declarationName
+  }
 
 -- | Private, depth 3. Used only by `fixWorkspace`.
 hasGuidance :: Array Fix.Guidance -> Located -> Boolean
@@ -352,17 +405,39 @@ same a b =
     && a.finding.rule.name == b.finding.rule.name
     && a.finding.message == b.finding.message
 
--- | Private. Used only by `lintWorkspace`.
+-- | Private. Used only by `lintWorkspace`. Uses `packageHolding`.
 reportSurvey :: Configured -> Array PackageSurvey -> Aff Int
 reportSurvey { flatRules, exemptions } surveys = do
   let
     forPackage s = map (append (s.packageName <> ": "))
-      (runSurveyRules exemptions flatRules.packages s)
+      (runSurveyRules { exemptions, packageOf: const s.packageName } flatRules.packages s)
     perPackage = Array.concatMap forPackage surveys
-    perWorkspace = runSurveyRules exemptions flatRules.workspaces { packages: surveys }
+    perWorkspace = runSurveyRules { exemptions, packageOf: packageHolding surveys }
+      flatRules.workspaces
+      { packages: surveys }
     findings = perPackage <> perWorkspace
   for_ findings \msg -> log ("  " <> msg)
   pure (Array.length findings)
+
+-- | Which package a workspace rule's finding is about, so a package's
+-- | own exemptions can answer for it: the package itself, or the one
+-- | holding the module or declaration named. A namespace is nobody's,
+-- | so it gets `""` and only the root file can speak for it.
+-- | Private. Used only by `reportSurvey`.
+packageHolding :: Array PackageSurvey -> Subject -> String
+packageHolding surveys =
+  let
+    holderOf :: String -> String
+    holderOf name = Maybe.fromMaybe ""
+      ( map _.packageName
+          (Array.find (\survey -> Array.any (\held -> held.moduleName == name) survey.modules) surveys)
+      )
+  in
+    case _ of
+      Package name -> name
+      Namespace _ -> ""
+      Module name -> holderOf name
+      Declaration name _ -> holderOf name
 
 -- | `skipModules` names modules no rule should see at all.
 -- | Everything a run is configured with.
@@ -411,8 +486,8 @@ type Rewrite =
   , rewritten :: CST.Module Void
   }
 
--- | One finding, and the module it was found in.
-type Located = { moduleName :: String, path :: String, finding :: Finding }
+-- | One finding, the module it was found in, and that module's package.
+type Located = { packageName :: String, moduleName :: String, path :: String, finding :: Finding }
 
 -- | Findings grouped by the rule that made them: what the rule wants,
 -- | then every place it was not met.
@@ -513,7 +588,7 @@ lintModule { skipModules, flatRules, exemptions } packageName workspaceModule = 
       { surveyed
       , violations: Array.length violations
       , located: map
-          (\f -> { moduleName: context.moduleName, path: context.path, finding: f })
+          (\f -> { packageName, moduleName: context.moduleName, path: context.path, finding: f })
           violations
       , rewrite:
           if fixed then Just

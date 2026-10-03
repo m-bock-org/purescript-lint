@@ -9,15 +9,18 @@ package:
       githubRepo: purescript-lint
   dependencies:
     - aff
+    - argonaut-core
     - arrays
     - console
     - effect
     - either
     - encode-decode
+    - exceptions
     - foldable-traversable
     - foreign-object
     - language-cst-parser
     - maybe
+    - newtype
     - node-buffer
     - node-child-process
     - node-fs
@@ -26,56 +29,19 @@ package:
     - ordered-collections
     - prelude
     - strings
+    - tailrec
     - transformers
     - tuples
   test:
-    main: Test.Main
+    main: Test.Lint.Main
     dependencies:
+      - bifunctors
+      - foldable-traversable
+      - node-fs
+      - node-os
+      - node-path
+      - node-process
       - partial
-      - patchdown
+      - refs
       - spec
       - spec-node
-workspace:
-  packageSet:
-    registry: 66.9.0
-  extraPackages:
-    codec-argonaut:
-      git: https://github.com/garyb/purescript-codec-argonaut.git
-      ref: dc287c83b79f86f8d9a0045dcb740f0cf9d23ccd
-      # This list is here because codec-argonaut predates spago.yaml -
-      # it ships a bower.json and nothing else, so spago cannot read its
-      # dependencies and they have to be restated. Every other entry
-      # above and below has its own spago.yaml, which is why none of
-      # them needs one.
-      #
-      # Its own bower.json names six of these; the rest are imports it
-      # makes without declaring. A whole-workspace build never noticed,
-      # because something else always pulled them in.
-      dependencies:
-        - argonaut-core
-        - arrays
-        - bifunctors
-        - codec
-        - control
-        - either
-        - foreign-object
-        - integers
-        - lists
-        - maybe
-        - newtype
-        - ordered-collections
-        - prelude
-        - profunctor
-        - record
-        - safe-coerce
-        - strings
-        - transformers
-        - tuples
-        - type-equality
-        - variant
-    patchdown:
-      git: https://github.com/m-bock/purescript-patchdown.git
-      ref: 7012c7a839d7c2f8e9d1a8acf9a56d9435eaccc4
-    encode-decode:
-      git: https://github.com/m-bock/purescript-encode-decode.git
-      ref: 07a361b0e42314ee6521b8ccc774eca117be57d0

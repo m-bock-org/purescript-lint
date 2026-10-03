@@ -85,6 +85,7 @@ noted message =
   , groups: []
   , message
   , hint: Nothing
+  , declarationName: Nothing
   }
 
 -- | Private, depth 3. Used only by `recorder`.

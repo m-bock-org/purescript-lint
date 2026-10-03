@@ -22,8 +22,9 @@ import Lint.RuleSet as RuleSet
 import Node.Encoding (Encoding(..))
 import Node.FS.Aff as FS
 import Node.FS.Stats as Stats
+import Test.Lint.Fixture (fixtureFile, inFixture)
 import Test.Lint.ReadmeExample (maxFunctionArity)
-import Test.Spec (Spec, describe, it)
+import Test.Spec (Spec, around_, describe, it)
 import Test.Spec.Assertions (fail, shouldEqual)
 
 spec :: Spec Unit
@@ -40,7 +41,7 @@ spec = do
     it "and why it was not" do
       outcomeLine (RuleId "r") "M" (Fix.Declined "no") `shouldEqual` "r in M - no"
 
-  describe "fixWorkspace" do
+  describe "fixWorkspace" $ around_ inFixture do
     it "puts the source back when a proposal is rejected" do
       seen <- liftEffect (Ref.new Nothing)
       _ <- runLinterWith
@@ -163,7 +164,7 @@ alwaysRewrites =
 
 -- | Private.
 thisFile :: String
-thisFile = "test/Test/Lint/FixSpec.purs"
+thisFile = fixtureFile
 
 --
 -- `spec`
