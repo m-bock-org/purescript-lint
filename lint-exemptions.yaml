@@ -232,6 +232,7 @@ exemptions:
       - Test.Lint.Internal.RuleSpec
       - Test.Lint.Internal.WorkspaceSpec
       - Test.Lint.Main
+      - Test.Lint.PackagesSpec
       - Test.Lint.ReadmeExample
       - Test.Lint.ReadmeExampleSpec
     kind: backlog

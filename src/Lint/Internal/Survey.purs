@@ -192,7 +192,16 @@ instance SurveyLike WorkspaceRule WorkspaceSurvey where
 -- | What answers for a survey finding: the exemptions, and which
 -- | package a finding's subject belongs to, so a package's own file
 -- | can answer for it.
-type SurveyExemptions = { exemptions :: Exemptions, packageOf :: Subject -> String }
+-- |
+-- | `wanted` is which subjects this run reports on at all: every one
+-- | for a whole run, and only a named package's for a run scoped to it,
+-- | because a workspace rule still has to see the whole workspace to
+-- | judge one package by what the others do with it.
+type SurveyExemptions =
+  { exemptions :: Exemptions
+  , packageOf :: Subject -> String
+  , wanted :: Subject -> Boolean
+  }
 
 -- | Run every survey rule and collect what they found.
 -- | Uses `kept`, `notExempt`.
@@ -203,7 +212,9 @@ runSurveyRules exempting rules survey =
     applyOne { rule: r }
       | surveyDisabled r = []
       | otherwise = map _.message
-          (Array.filter (\f -> kept r f && notExempt exempting r f) (surveyCheck r survey))
+          ( Array.filter (\f -> exempting.wanted f.subject && kept r f && notExempt exempting r f)
+              (surveyCheck r survey)
+          )
   in
     Array.concatMap applyOne rules
 

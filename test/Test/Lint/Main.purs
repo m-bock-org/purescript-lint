@@ -11,6 +11,7 @@ import Test.Lint.Internal.RuleSetSpec as RuleSetSpec
 import Test.Lint.Internal.RuleSpec as RuleSpec
 import Test.Lint.Internal.WorkspaceSpec as WorkspaceSpec
 import Test.Lint.ReadmeExampleSpec as ReadmeExampleSpec
+import Test.Lint.PackagesSpec as PackagesSpec
 import Test.Spec.Reporter.Console (consoleReporter)
 import Test.Spec.Runner.Node (runSpecAndExitProcess)
 
@@ -25,3 +26,4 @@ main =
     ExemptionsSpec.spec
     FixSpec.spec
     InstanceMembersSpec.spec
+    PackagesSpec.spec

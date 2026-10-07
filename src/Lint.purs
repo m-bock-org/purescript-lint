@@ -5,10 +5,12 @@ module Lint
   , Rewrite
   , lintWorkspace
   , lintWorkspaceIn
+  , lintPackages
   , oldestFirst
   , recordedIn
   , rewriteDecls
   , runLinter
+  , runLinterIn
   , runLinterWith
   ) where
 
@@ -76,17 +78,53 @@ import PureScript.CST.Types
 runLinter :: Array Rule -> Aff Boolean
 runLinter = runLinterWith { skipModules: [], fix: Nothing, standing: Exemptions.All }
 
--- | Uses `lintWorkspace`, `applyRewrites`, `fixWorkspace`, `printByRule`, `printSummary`.
+-- | Uses `lintOver`.
 runLinterWith :: LintOptions -> Array Rule -> Aff Boolean
 runLinterWith options rules = do
   workspace <- Workspace.getWorkspace
+  lintOver (const true) workspace options rules
+
+-- | The same, over only the packages named - or, when one of
+-- | them is not a package of this workspace, the words saying which,
+-- | before anything is linted: a misspelled name that linted nothing
+-- | would read as a clean package.
+-- |
+-- | A fixer still works over the whole workspace, and only the report
+-- | at the end is scoped: its judge asks whether a fix made the
+-- | repository worse, and a finding it caused in another package is
+-- | the one that question exists for.
+-- | Uses `allKnown`, `lintOver`.
+runLinterIn :: NEA.NonEmptyArray String -> LintOptions -> Array Rule -> Aff (Either String Boolean)
+runLinterIn names options rules = do
+  workspace <- Workspace.getWorkspace
+  for (allKnown names (map _.name workspace.packages)) \_ ->
+    lintOver (\name -> NEA.elem name names) workspace options rules
+
+-- | Private. Used only by `runLinterIn`.
+allKnown :: NEA.NonEmptyArray String -> Array String -> Either String Unit
+allKnown names known = case NEA.filter (\name -> not (Array.elem name known)) names of
+  [] -> Right unit
+  missing -> Left
+    ( fold
+        [ "no package called "
+        , Str.joinWith ", " missing
+        , " in this workspace; there are "
+        , Str.joinWith ", " (Array.sort known)
+        ]
+    )
+
+-- | `wanted` says, by name, which packages are reported on.
+-- | Private, depth 2. Used only by `runLinterWith`, `runLinterIn`. Uses `lintWhere`,
+-- | `applyRewrites`, `fixWorkspace`, `printByRule`, `printSummary`.
+lintOver :: (String -> Boolean) -> Workspace.Workspace -> LintOptions -> Array Rule -> Aff Boolean
+lintOver wanted workspace options rules = do
   case options.fix of
     Nothing -> pure unit
     Just fix -> do
       before <- lintWorkspaceIn workspace options rules
       applyRewrites before.rewrites
       void (fixWorkspace workspace options fix rules)
-  report <- lintWorkspaceIn workspace options rules
+  report <- lintWhere wanted workspace options rules
   printByRule report.located
   printSummary report.total (Array.length (Array.nub (map _.moduleName report.located)))
     report.moduleCount
@@ -113,14 +151,46 @@ lintWorkspace options rules = do
 -- | after every proposal - so a run asks once and passes the answer
 -- | down; what changes between lints is the files, never which
 -- | packages there are.
--- | Uses `readOrFail`, `lintModule`, `reportSurvey`.
+-- | Uses `lintWhere`.
 lintWorkspaceIn :: Workspace.Workspace -> LintOptions -> Array Rule -> Aff LintReport
-lintWorkspaceIn workspace { skipModules, standing } rules = do
+lintWorkspaceIn = lintWhere (const true)
+
+-- | `lintWorkspace`, reporting only on the packages named.
+-- | Uses `lintWhere`.
+lintPackages :: NEA.NonEmptyArray String -> LintOptions -> Array Rule -> Aff LintReport
+lintPackages names options rules = do
+  workspace <- Workspace.getWorkspace
+  lintWhere (\name -> NEA.elem name names) workspace options rules
+
+-- | The walk both of those are, with which packages to report on.
+-- |
+-- | Every module is still read, and surveyed: a workspace rule decides
+-- | about one package from what the others import, so it is run over
+-- | the whole workspace and only its findings about a named package
+-- | are kept. The module, declaration and expression rules - which see
+-- | one module and nothing else, and are where nearly all of a run's
+-- | time goes - are run on the named packages' modules only. Each of
+-- | those findings is therefore exactly one a whole run would report.
+-- |
+-- | What a scoped run cannot say is what the edit did to a package it
+-- | was not asked about - an import removed here leaves an export over
+-- | there unused - nor anything about a namespace, which is no one
+-- | package's. A whole run is still the gate.
+-- | Private. Used only by `lintWorkspaceIn`, `lintPackages`, `lintOver`. Uses `readOrFail`,
+-- | `lintModule`, `reportSurvey`.
+lintWhere
+  :: (String -> Boolean) -> Workspace.Workspace -> LintOptions -> Array Rule -> Aff LintReport
+lintWhere wanted workspace { skipModules, standing } rules = do
   exemptions <- readOrFail standing workspace
   let
     flatRules = flattenRules rules
-    configured = { skipModules, flatRules, exemptions }
-    moduleCount = Array.length (Array.concatMap _.modules workspace.packages)
+    outside =
+      { name: "outside the packages asked for"
+      , appliesTo: \context -> not (wanted context.packageName)
+      }
+    configured = { skipModules: Array.snoc skipModules outside, flatRules, exemptions }
+    moduleCount = Array.length
+      (Array.concatMap _.modules (Array.filter (\pkg -> wanted pkg.name) workspace.packages))
   scanned <- for workspace.packages \pkg -> do
     perModule <- for pkg.modules (lintModule configured pkg.name)
     let
@@ -136,7 +206,7 @@ lintWorkspaceIn workspace { skipModules, standing } rules = do
       , located: Array.concatMap _.located perModule
       , rewrites: Array.mapMaybe _.rewrite perModule
       }
-  surveyed <- reportSurvey configured (map _.survey scanned)
+  surveyed <- reportSurvey wanted configured (map _.survey scanned)
   let total = sum (map _.violations scanned) + surveyed
   pure
     { located: Array.concatMap _.located scanned
@@ -419,14 +489,21 @@ same a b =
     && a.finding.rule.name == b.finding.rule.name
     && a.finding.message == b.finding.message
 
--- | Private. Used only by `lintWorkspace`. Uses `packageHolding`.
-reportSurvey :: Configured -> Array PackageSurvey -> Aff Int
-reportSurvey { flatRules, exemptions } surveys = do
+-- | Private. Used only by `lintWhere`. Uses `packageHolding`.
+reportSurvey :: (String -> Boolean) -> Configured -> Array PackageSurvey -> Aff Int
+reportSurvey wanted { flatRules, exemptions } surveys = do
   let
     forPackage s = map (append (s.packageName <> ": "))
-      (runSurveyRules { exemptions, packageOf: const s.packageName } flatRules.packages s)
-    perPackage = Array.concatMap forPackage surveys
-    perWorkspace = runSurveyRules { exemptions, packageOf: packageHolding surveys }
+      ( runSurveyRules { exemptions, packageOf: const s.packageName, wanted: const true }
+          flatRules.packages
+          s
+      )
+    perPackage = Array.concatMap forPackage (Array.filter (\s -> wanted s.packageName) surveys)
+    perWorkspace = runSurveyRules
+      { exemptions
+      , packageOf: packageHolding surveys
+      , wanted: \subject -> wanted (packageHolding surveys subject)
+      }
       flatRules.workspaces
       { packages: surveys }
     findings = perPackage <> perWorkspace
