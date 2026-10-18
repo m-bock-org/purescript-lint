@@ -810,9 +810,12 @@ lintExprsInDecl
   -> RuleOutcome (CST.Declaration Void)
 lintExprsInDecl exemptions exprRules context decl =
   let
+    rulesHere :: CST.Expr Void -> RuleOutcome (CST.Expr Void)
+    rulesHere = runRules exemptions context exprRules
+
     applyExprRules :: CST.Expr Void -> State ExprLintState (CST.Expr Void)
     applyExprRules expr = do
-      let exprResult = runRules exemptions context exprRules expr
+      let exprResult = rulesHere expr
       modify_ \s -> s
         { violations = s.violations <> exprResult.violations
         , fixed = s.fixed || exprResult.fixed

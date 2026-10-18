@@ -41,7 +41,7 @@ module Lint.Internal.Rule
 
 import Prelude
 
-import Data.Array (find, foldl) as Array
+import Data.Array (filter, find, foldl) as Array
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty (fromArray, toArray) as NEA
 import Data.Maybe (Maybe(..))
@@ -369,7 +369,7 @@ type RuleOutcome a = { result :: a, fixed :: Boolean, violations :: Array Findin
 -- | rules, because they are a claim about a repository and the rule set
 -- | is shared between repositories. A rule does not know where it is
 -- | running; this does.
--- | Private. Used only by `runRules`.
+-- | Private. Used only by `dropExemptRules`.
 exemptHere :: Exemptions -> LintContext -> String -> Boolean
 exemptHere exemptions context rule = Exemptions.matches exemptions
   { rule
@@ -387,7 +387,10 @@ asFinding context groups rule hint message =
   { rule, groups, message, hint, declarationName: context.declarationName }
 
 -- | rule's input.
--- | Uses `exemptHere`, `skipWhen`, `asFinding`.
+-- |
+-- | Applied to its first three arguments, it has dropped the exempt rules and waits for
+-- | the value, so a caller with many values in one place asks for exemptions once.
+-- | Uses `dropExemptRules`, `runEveryRule`.
 runRules
   :: ∀ r a
    . RuleLike r a
@@ -396,11 +399,27 @@ runRules
   -> Array (Grouped r)
   -> a
   -> RuleOutcome a
-runRules exemptions context rules initial =
+runRules exemptions context rules =
+  let
+    rulesHere :: Array (Grouped r)
+    rulesHere = dropExemptRules exemptions context rules
+  in
+    \(initial :: a) -> runEveryRule context rulesHere initial
+
+-- | The rules not exempt here.
+-- | Private. Used only by `runRules`. Uses `exemptHere`.
+dropExemptRules :: ∀ r a. RuleLike r a => Exemptions -> LintContext -> Array (Grouped r) -> Array (Grouped r)
+dropExemptRules exemptions context =
+  Array.filter \(grouped :: Grouped r) ->
+    not (exemptHere exemptions context (Newtype.unwrap (ruleInfo grouped.rule).name))
+
+-- | Every rule given over one value, unchecked for exemptions.
+-- | Private. Used only by `runRules`. Uses `skipWhen`, `asFinding`.
+runEveryRule :: ∀ r a. RuleLike r a => LintContext -> Array (Grouped r) -> a -> RuleOutcome a
+runEveryRule context rules initial =
   let
     applyOne acc { groups, rule: r }
       | ruleDisabled r = acc
-      | exemptHere exemptions context (Newtype.unwrap (ruleInfo r).name) = acc
       | otherwise =
           case skipWhen { exemptions: ruleExclude r, check: ruleCheck r } context acc.result of
             Passed -> acc
