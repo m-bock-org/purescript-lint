@@ -13,6 +13,7 @@ import Lint
   , lintPackages
   , lintWorkspace
   , runLinterIn
+  , runLinterOnInterfaces
   , runLinterOnPackage
   , writeInterface
   ) as Subject
@@ -29,7 +30,7 @@ import Lint.Rule.Survey
 import Lint.RuleSet (Rule, rule) as RuleSet
 import Node.Encoding (Encoding(..))
 import Node.FS.Aff (mkdir, rm, writeTextFile) as FS
-import Test.Lint.Fixture (fixtureFile, inFixture)
+import Test.Lint.Fixture (fixtureFile, inFixture, otherFile)
 import Test.Lint.ReadmeExample (maxFunctionArity)
 import Test.Spec (Spec, around_, describe, it)
 import Test.Spec.Assertions (fail, shouldEqual)
@@ -107,6 +108,47 @@ spec = do
         }
         wholeRunOptions
         []
+
+      clean `shouldEqual` true
+
+  describe "every package, read from its interface alone" $ around_ inFixture do
+    it "a spanning rule runs over the interfaces, with every source gone" do
+      FS.writeTextFile UTF8 "manifest.json" twoPackages
+
+      (fixture :: String) <-
+        Subject.writeInterface { package: "fixture", manifest: "manifest.json" }
+      (other :: String) <-
+        Subject.writeInterface { package: "other", manifest: "manifest.json" }
+
+      FS.mkdir "interfaces"
+      FS.writeTextFile UTF8 "interfaces/fixture.json" fixture
+      FS.writeTextFile UTF8 "interfaces/other.json" other
+      FS.rm fixtureFile
+      FS.rm otherFile
+
+      (clean :: Boolean) <- Subject.runLinterOnInterfaces
+        { manifest: "manifest.json"
+        , interfaces: "interfaces"
+        , spanning: const true
+        }
+        wholeRunOptions
+        fixtureRules
+
+      clean `shouldEqual` false
+
+    it "a rule that is not spanning is left to the packages' own runs" do
+      FS.writeTextFile UTF8 "manifest.json" twoPackages
+      FS.mkdir "interfaces"
+      FS.writeTextFile UTF8 "interfaces/fixture.json" "{\"package\":\"fixture\",\"modules\":[]}"
+      FS.writeTextFile UTF8 "interfaces/other.json" "{\"package\":\"other\",\"modules\":[]}"
+
+      (clean :: Boolean) <- Subject.runLinterOnInterfaces
+        { manifest: "manifest.json"
+        , interfaces: "interfaces"
+        , spanning: const false
+        }
+        wholeRunOptions
+        fixtureRules
 
       clean `shouldEqual` true
 

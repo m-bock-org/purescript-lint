@@ -1,5 +1,6 @@
 module Lint
-  ( LintOptions
+  ( InterfaceRun
+  , LintOptions
   , LintReport
   , Located
   , PackageRun
@@ -12,6 +13,7 @@ module Lint
   , rewriteDecls
   , runLinter
   , runLinterIn
+  , runLinterOnInterfaces
   , runLinterOnPackage
   , runLinterWith
   , writeInterface
@@ -117,13 +119,16 @@ runLinterIn names options rules = do
 
 -- | One package's run, as a check that sees only that package: its name, the manifest
 -- | naming it and its neighbours, where the neighbours' interfaces are, and which
--- | workspace rules need every package: those are left to a run over all of them.
+-- | workspace rules need every package: those are left to `runLinterOnInterfaces`.
 type PackageRun =
   { package :: String
   , manifest :: FilePath
   , interfaces :: FilePath
   , spanning :: String -> Boolean
   }
+
+-- | The run over every package's interface, for the workspace rules that need them all.
+type InterfaceRun = { manifest :: FilePath, interfaces :: FilePath, spanning :: String -> Boolean }
 
 -- | Lint one package: its modules read whole, every other package in the manifest
 -- | read from its interface. Its module, declaration, expression and package rules run,
@@ -168,6 +173,34 @@ runLinterOnPackage run options rules = do
   printSummary total (Array.length (Array.nub (map _.moduleName located))) (Array.length modules)
   pure (total == 0)
 
+-- | The workspace rules that are `spanning`, over every package's interface and
+-- | nothing else: no module is read whole, so this costs a parse of the headers.
+-- | Uses `surveyFromInterface`, `readOrFail`, `reportSurvey`.
+runLinterOnInterfaces :: InterfaceRun -> LintOptions -> Array Rule -> Aff Boolean
+runLinterOnInterfaces run options rules = do
+  (manifest :: Array ManifestPackage) <- Interface.readManifest run.manifest
+  (surveys :: Array PackageSurvey) <- for manifest (surveyFromInterface run.interfaces)
+  (exemptions :: Exemptions) <- readOrFail options.standing { packages: map asLocal manifest }
+  let
+    flatRules :: FlatRules
+    flatRules = flattenRules rules
+
+    configured :: Configured
+    configured =
+      { skipModules: []
+      , flatRules:
+          { modules: []
+          , declarations: []
+          , expressions: []
+          , packages: []
+          , workspaces: whereSpanning run.spanning flatRules
+          }
+      , exemptions
+      }
+  (total :: Int) <- reportSurvey (const true) configured surveys
+  printSummary total 0 (sum (map (\(one :: PackageSurvey) -> Array.length one.modules) surveys))
+  pure (total == 0)
+
 -- | One package's interface, as the text `runLinterOnPackage` reads for a neighbour:
 -- | every module's name, path, kind and header, from that package's sources only.
 -- | Uses `ownPackage`, `moduleNameOf`, `headerText`.
@@ -189,17 +222,17 @@ ownPackage run manifest =
     Just one -> pure one
     Nothing -> Aff.throwError (Aff.error ("no package called " <> run.package <> " in " <> run.manifest))
 
--- | Private. Used only by `runLinterOnPackage`.
+-- | Private. Used only by `runLinterOnPackage`, `runLinterOnInterfaces`.
 asLocal :: ManifestPackage -> Workspace.LocalPackage
 asLocal one = { name: one.name, path: one.path, dependencies: one.dependencies, modules: [] }
 
--- | Private. Used only by `runLinterOnPackage`.
+-- | Private. Used only by `runLinterOnPackage`, `runLinterOnInterfaces`.
 whereSpanning :: (String -> Boolean) -> FlatRules -> Array (Grouped WorkspaceRule)
 whereSpanning keep flatRules =
   Array.filter (\(one :: Grouped WorkspaceRule) -> keep (unwrap (surveyName one.rule))) flatRules.workspaces
 
 -- | A neighbour as a survey sees it, read from its interface in `dir`.
--- | Private. Used only by `runLinterOnPackage`.
+-- | Private. Used only by `runLinterOnPackage`, `runLinterOnInterfaces`.
 surveyFromInterface :: FilePath -> ManifestPackage -> Aff PackageSurvey
 surveyFromInterface dir one = do
   (interface :: Interface.Interface) <- Interface.readInterface (Path.concat [ dir, one.name <> ".json" ])
