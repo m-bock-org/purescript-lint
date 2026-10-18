@@ -4,6 +4,8 @@ module Lint.Internal.Workspace
   , WorkspaceModule
   , getWorkspace
   , moduleGlob
+  , modulesOf
+  , parseModuleText
   , readModule
   , writeModule
   ) where
@@ -49,7 +51,8 @@ type WorkspaceModule =
   , kind :: ModuleKind
   }
 
--- | Private, depth 2. Used only by `toLocalPackage`. Uses `modulesOfKind`, `moduleGlob`.
+-- | Every module under a package's `src` and `test`, by path.
+-- | Uses `modulesOfKind`, `moduleGlob`.
 modulesOf :: FilePath -> Aff (Array WorkspaceModule)
 modulesOf packagePath = do
   sourceModules <- modulesOfKind SourceModule (moduleGlob packagePath "src")
@@ -93,12 +96,17 @@ toLocalPackage { name, path, dependencies } = do
 readModule :: WorkspaceModule -> Aff (CST.Module Void)
 readModule { path } = do
   src <- FS.readTextFile UTF8 path
+  parseModuleText path src
+
+-- | A module's text, parsed; `path` is only for the error.
+parseModuleText :: FilePath -> String -> Aff (CST.Module Void)
+parseModuleText path src =
   case CST.parseModule src of
     CST.ParseSucceeded m -> pure m
     CST.ParseSucceededWithErrors _ errs -> parseFailure path (NEA.head errs)
     CST.ParseFailed err -> parseFailure path err
 
--- | Private. Used only by `readModule`. Uses `printPositionedError`.
+-- | Private. Used only by `parseModuleText`. Uses `printPositionedError`.
 parseFailure :: ∀ a. FilePath -> PositionedError -> Aff a
 parseFailure path err = Aff.throwError (Aff.error (printPositionedError path err))
 

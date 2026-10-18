@@ -2,6 +2,7 @@ module Lint
   ( LintOptions
   , LintReport
   , Located
+  , PackageRun
   , Rewrite
   , lintWorkspace
   , lintWorkspaceIn
@@ -11,7 +12,9 @@ module Lint
   , rewriteDecls
   , runLinter
   , runLinterIn
+  , runLinterOnPackage
   , runLinterWith
+  , writeInterface
   ) where
 
 import Prelude
@@ -37,6 +40,8 @@ import Lint.Fix (FixConfig)
 import Lint.Fix as Fix
 import Lint.Internal.Exemptions (Exemptions)
 import Lint.Internal.Exemptions as Exemptions
+import Lint.Internal.Interface (InterfaceModule, ManifestPackage)
+import Lint.Internal.Interface as Interface
 import Lint.Internal.Rule
   ( ExprRule
   , Finding
@@ -47,11 +52,21 @@ import Lint.Internal.Rule
   , runRules
   )
 import Lint.Internal.RuleSet (FlatRules, Rule, flattenRules)
-import Lint.Internal.Survey (PackageSurvey, Subject(..), SurveyModule, runSurveyRules)
+import Lint.Internal.Survey
+  ( PackageSurvey
+  , Subject(..)
+  , SurveyModule
+  , WorkspaceRule
+  , runSurveyRules
+  , surveyName
+  )
 import Lint.Internal.Workspace (WorkspaceModule)
 import Lint.Internal.Workspace as Workspace
 import Node.Encoding (Encoding(..))
 import Node.FS.Aff as FS
+import Node.Path (FilePath)
+import Node.Path (concat) as Path
+import PureScript.CST (printModule) as CST
 import PureScript.CST.Traversal (defaultVisitorM, rewriteDeclBottomUpM)
 import PureScript.CST.Types
   ( Declaration(..)
@@ -99,6 +114,113 @@ runLinterIn names options rules = do
   workspace <- Workspace.getWorkspace
   for (allKnown names (map _.name workspace.packages)) \_ ->
     lintOver (\name -> NEA.elem name names) workspace options rules
+
+-- | One package's run, as a check that sees only that package: its name, the manifest
+-- | naming it and its neighbours, where the neighbours' interfaces are, and which
+-- | workspace rules need every package: those are left to a run over all of them.
+type PackageRun =
+  { package :: String
+  , manifest :: FilePath
+  , interfaces :: FilePath
+  , spanning :: String -> Boolean
+  }
+
+-- | Lint one package: its modules read whole, every other package in the manifest
+-- | read from its interface. Its module, declaration, expression and package rules run,
+-- | and the workspace rules that are not `spanning`, reporting only on this package.
+-- | Each finding is one a whole run would report, given its neighbours are what it
+-- | declares.
+-- | Uses `ownPackage`, `surveyFromInterface`, `readOrFail`, `lintModule`, `reportSurvey`.
+runLinterOnPackage :: PackageRun -> LintOptions -> Array Rule -> Aff Boolean
+runLinterOnPackage run options rules = do
+  (manifest :: Array ManifestPackage) <- Interface.readManifest run.manifest
+  (own :: ManifestPackage) <- ownPackage run manifest
+  (modules :: Array WorkspaceModule) <- Workspace.modulesOf own.path
+  (neighbours :: Array PackageSurvey) <-
+    for (Array.filter (\(one :: ManifestPackage) -> one.name /= own.name) manifest)
+      (surveyFromInterface run.interfaces)
+  (exemptions :: Exemptions) <- readOrFail options.standing { packages: [ asLocal own ] }
+  let
+    flatRules :: FlatRules
+    flatRules = flattenRules rules
+
+    configured :: Configured
+    configured =
+      { skipModules: options.skipModules
+      , flatRules: flatRules { workspaces = whereSpanning (not <<< run.spanning) flatRules }
+      , exemptions
+      }
+  perModule <- for modules (lintModule configured own.name)
+  let
+    survey :: PackageSurvey
+    survey =
+      { packageName: own.name
+      , packagePath: own.path
+      , dependencies: own.dependencies
+      , modules: map _.surveyed perModule
+      }
+
+    located :: Array Located
+    located = Array.concatMap _.located perModule
+  (surveyed :: Int) <- reportSurvey (_ == own.name) configured (Array.cons survey neighbours)
+  printByRule located
+  let total = sum (map _.violations perModule) + surveyed
+  printSummary total (Array.length (Array.nub (map _.moduleName located))) (Array.length modules)
+  pure (total == 0)
+
+-- | One package's interface, as the text `runLinterOnPackage` reads for a neighbour:
+-- | every module's name, path, kind and header, from that package's sources only.
+-- | Uses `ownPackage`, `moduleNameOf`, `headerText`.
+writeInterface :: { package :: String, manifest :: FilePath } -> Aff String
+writeInterface run = do
+  (manifest :: Array ManifestPackage) <- Interface.readManifest run.manifest
+  (own :: ManifestPackage) <- ownPackage { package: run.package, manifest: run.manifest } manifest
+  (modules :: Array WorkspaceModule) <- Workspace.modulesOf own.path
+  (described :: Array InterfaceModule) <- for modules \(one :: WorkspaceModule) -> do
+    (parsed :: CST.Module Void) <- Workspace.readModule one
+    pure { moduleName: moduleNameOf parsed, path: one.path, kind: one.kind, header: headerText parsed }
+  pure (Interface.printInterface { package: own.name, modules: described })
+
+-- | Private. Used only by `runLinterOnPackage`, `writeInterface`.
+ownPackage
+  :: ∀ r. { package :: String, manifest :: FilePath | r } -> Array ManifestPackage -> Aff ManifestPackage
+ownPackage run manifest =
+  case Array.find (\(one :: ManifestPackage) -> one.name == run.package) manifest of
+    Just one -> pure one
+    Nothing -> Aff.throwError (Aff.error ("no package called " <> run.package <> " in " <> run.manifest))
+
+-- | Private. Used only by `runLinterOnPackage`.
+asLocal :: ManifestPackage -> Workspace.LocalPackage
+asLocal one = { name: one.name, path: one.path, dependencies: one.dependencies, modules: [] }
+
+-- | Private. Used only by `runLinterOnPackage`.
+whereSpanning :: (String -> Boolean) -> FlatRules -> Array (Grouped WorkspaceRule)
+whereSpanning keep flatRules =
+  Array.filter (\(one :: Grouped WorkspaceRule) -> keep (unwrap (surveyName one.rule))) flatRules.workspaces
+
+-- | A neighbour as a survey sees it, read from its interface in `dir`.
+-- | Private. Used only by `runLinterOnPackage`.
+surveyFromInterface :: FilePath -> ManifestPackage -> Aff PackageSurvey
+surveyFromInterface dir one = do
+  (interface :: Interface.Interface) <- Interface.readInterface (Path.concat [ dir, one.name <> ".json" ])
+  (modules :: Array SurveyModule) <- for interface.modules \(held :: InterfaceModule) -> do
+    (parsed :: CST.Module Void) <- Workspace.parseModuleText held.path held.header
+    pure
+      { moduleName: held.moduleName
+      , path: held.path
+      , kind: held.kind
+      , imports: importsOf parsed
+      , header: headerOf parsed
+      }
+  pure { packageName: one.name, packagePath: one.path, dependencies: one.dependencies, modules }
+
+-- | A module's header as text: the module printed with its declarations dropped, and a
+-- | line end, without which a header with no imports does not parse again.
+-- | Private. Used only by `writeInterface`.
+headerText :: CST.Module Void -> String
+headerText (CST.Module { header, body: CST.ModuleBody body }) =
+  CST.printModule (CST.Module { header, body: CST.ModuleBody (body { decls = [], trailingComments = [] }) })
+    <> "\n"
 
 -- | Private. Used only by `runLinterIn`.
 allKnown :: NEA.NonEmptyArray String -> Array String -> Either String Unit

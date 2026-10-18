@@ -274,6 +274,7 @@ exemptions:
   - rule: exposed-modules
     modules:
       - Lint.Internal.Exemptions
+      - Lint.Internal.Interface
       - Lint.Internal.Spago
     kind: backlog
     since: "2026-10-04"
@@ -460,6 +461,7 @@ exemptions:
       - Lint.Fix
       - Lint.Internal.Dedent
       - Lint.Internal.Exemptions
+      - Lint.Internal.Interface
       - Lint.Internal.Rule
       - Lint.Internal.RuleSet
       - Lint.Internal.Spago

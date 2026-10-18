@@ -27,6 +27,7 @@ package:
     - node-glob-basic
     - node-path
     - ordered-collections
+    - overture
     - prelude
     - strings
     - tailrec
