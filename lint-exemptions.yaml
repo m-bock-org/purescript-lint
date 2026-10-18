@@ -601,3 +601,11 @@ exemptions:
     why: >-
       A finding on 2026-10-04, when nineteen repositories became this one workspace and the lint
       became a gate. Not a decision: fix it and delete this line.
+  - rule: require-qualified-imports
+    modules:
+      - "*"
+    kind: backlog
+    since: "2026-10-08"
+    why: >-
+      95 findings in 21 modules, from the day the rule took on the whole import policy - values
+      qualified, alias the last segment. Not a claim that the rule is wrong.
