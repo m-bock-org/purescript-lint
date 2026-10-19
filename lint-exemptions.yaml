@@ -611,3 +611,17 @@ exemptions:
     why: >-
       95 findings in 21 modules, from the day the rule took on the whole import policy - values
       qualified, alias the last segment. Not a claim that the rule is wrong.
+  - rule: one-line-record-type-fields
+    modules:
+      - Lint
+      - Lint.Fix
+      - Lint.Internal.Exemptions
+      - Lint.Internal.Interface
+      - Lint.Internal.Rule
+      - Lint.Internal.Survey
+      - Test.Lint.Fixture
+    kind: backlog
+    since: "2026-10-19"
+    why: >-
+      A finding on 2026-10-19, when one-line-record-type-fields began asking for one member per
+      line in a type synonym, an open tail counted. Not a decision: fix it and delete this line.
