@@ -625,3 +625,17 @@ exemptions:
     why: >-
       A finding on 2026-10-19, when one-line-record-type-fields began asking for one member per
       line in a type synonym, an open tail counted. Not a decision: fix it and delete this line.
+  - rule: do-bind-layout
+    modules:
+      - Lint.Internal.Interface
+      - Lint.Internal.Spago
+      - Test.Lint.ExemptionsSpec
+      - Test.Lint.Fixture
+      - Test.Lint.Internal.RuleSetSpec
+      - Test.Lint.Internal.RuleSpec
+      - Test.Lint.PackagesSpec
+    kind: backlog
+    since: "2026-10-19"
+    why: >-
+      A finding on 2026-10-19, when do-bind-layout began asking for a blank line around a
+      statement that spans lines. Not a decision: fix it and delete this line.
