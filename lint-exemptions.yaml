@@ -648,3 +648,20 @@ exemptions:
     why: >-
       `Node.FS.Sync as Sync`, found when no-generic-alias was switched on; the import table names
       it `FSSync` now. New rules apply where we work: rename the alias when touching the module.
+  - rule: no-qualified-type
+    modules:
+      - Lint
+      - Lint.Internal.Rule
+      - Lint.Internal.Survey
+      - Lint.Internal.Workspace
+      - Test.Lint.FixSpec
+      - Test.Lint.Internal.RuleSpec
+      - Test.Lint.PackagesSpec
+      - Test.Lint.ReadmeExample
+      - Test.Lint.ReadmeExampleSpec
+    kind: backlog
+    since: "2026-10-19"
+    why: >-
+      41 findings in 9 modules, found when no-qualified-type was switched on: a type written
+      qualified, or listed in a qualified import. Not a decision: import each type bare, values
+      qualified, and delete this entry.
