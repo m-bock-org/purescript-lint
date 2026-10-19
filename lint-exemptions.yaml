@@ -639,3 +639,12 @@ exemptions:
     why: >-
       A finding on 2026-10-19, when do-bind-layout began asking for a blank line around a
       statement that spans lines. Not a decision: fix it and delete this line.
+  - rule: no-generic-alias
+    modules:
+      - Lint.Internal.Exemptions
+      - Test.Lint.Fixture
+    kind: backlog
+    since: "2026-10-19"
+    why: >-
+      `Node.FS.Sync as Sync`, found when no-generic-alias was switched on; the import table names
+      it `FSSync` now. New rules apply where we work: rename the alias when touching the module.
