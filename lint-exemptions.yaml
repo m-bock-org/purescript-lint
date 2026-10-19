@@ -665,3 +665,20 @@ exemptions:
       41 findings in 9 modules, found when no-qualified-type was switched on: a type written
       qualified, or listed in a qualified import. Not a decision: import each type bare, values
       qualified, and delete this entry.
+  - rule: doc-comment-noun-phrase
+    modules:
+      - Lint
+      - Lint.Fix
+      - Lint.Internal.Exemptions
+      - Lint.Internal.Interface
+      - Lint.Internal.Rule
+      - Lint.Internal.Survey
+      - Lint.Internal.Workspace
+      - Lint.Rule
+      - Test.Lint.Fixture
+    kind: backlog
+    since: "2026-10-19"
+    why: >-
+      29 findings in 9 modules on 2026-10-19, when doc-comment-noun-phrase
+      began refusing a doc comment that opens with a question word or `Returns`. Not a
+      decision: name the thing, as a noun phrase, and delete this line.
