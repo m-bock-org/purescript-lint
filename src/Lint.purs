@@ -162,6 +162,7 @@ runLinterOnPackage run options rules = do
       { packageName: own.name
       , packagePath: own.path
       , dependencies: own.dependencies
+      , testDependencies: own.testDependencies
       , modules: map _.surveyed perModule
       }
 
@@ -224,7 +225,13 @@ ownPackage run manifest =
 
 -- | Private. Used only by `runLinterOnPackage`, `runLinterOnInterfaces`.
 asLocal :: ManifestPackage -> Workspace.LocalPackage
-asLocal one = { name: one.name, path: one.path, dependencies: one.dependencies, modules: [] }
+asLocal one =
+  { name: one.name
+  , path: one.path
+  , dependencies: one.dependencies
+  , testDependencies: one.testDependencies
+  , modules: []
+  }
 
 -- | Private. Used only by `runLinterOnPackage`, `runLinterOnInterfaces`.
 whereSpanning :: (String -> Boolean) -> FlatRules -> Array (Grouped WorkspaceRule)
@@ -245,7 +252,13 @@ surveyFromInterface dir one = do
       , imports: importsOf parsed
       , header: headerOf parsed
       }
-  pure { packageName: one.name, packagePath: one.path, dependencies: one.dependencies, modules }
+  pure
+    { packageName: one.name
+    , packagePath: one.path
+    , dependencies: one.dependencies
+    , testDependencies: one.testDependencies
+    , modules
+    }
 
 -- | A module's header as text: the module printed with its declarations dropped, and a
 -- | line end, without which a header with no imports does not parse again.
@@ -353,6 +366,7 @@ lintWhere wanted workspace { skipModules, standing } rules = do
         { packageName: pkg.name
         , packagePath: pkg.path
         , dependencies: pkg.dependencies
+        , testDependencies: pkg.testDependencies
         , modules: map _.surveyed perModule
         }
     pure

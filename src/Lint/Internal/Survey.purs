@@ -83,6 +83,7 @@ type PackageSurvey =
   { packageName :: String
   , packagePath :: FilePath
   , dependencies :: Array String
+  , testDependencies :: Array String
   , modules :: Array SurveyModule
   }
 

@@ -37,11 +37,13 @@ import PureScript.CST.Types (Module) as CST
 type Workspace = { packages :: Array LocalPackage }
 
 -- | One package: its spago name, its directory, what its own
--- | `spago.yaml` depends on, and its modules.
+-- | `spago.yaml` depends on, for its sources and for its tests, and its
+-- | modules.
 type LocalPackage =
   { name :: String
   , path :: FilePath
   , dependencies :: Array String
+  , testDependencies :: Array String
   , modules :: Array WorkspaceModule
   }
 
@@ -87,9 +89,9 @@ getWorkspace =
 
 -- | Private. Used only by `getWorkspace`. Uses `modulesOf`.
 toLocalPackage :: SpagoWorkspacePackage -> Aff LocalPackage
-toLocalPackage { name, path, dependencies } = do
+toLocalPackage { name, path, dependencies, testDependencies } = do
   modules <- modulesOf path
-  pure { name, path, dependencies, modules }
+  pure { name, path, dependencies, testDependencies, modules }
 
 -- | Parse one module, failing loudly if it does not parse.
 -- | Uses `parseFailure`.

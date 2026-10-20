@@ -9,8 +9,8 @@ module Lint.Internal.Interface
 
 import Overture
 
-import Data.Json.Codec (JsonCodec, codecArray, codecRefine, codecString, decoder, encoder)
-import Data.Json.Codec.Record (codecRecord)
+import Data.Json.Codec (JsonCodec, codecArray, codecInvmap, codecRefine, codecString, decoder, encoder)
+import Data.Json.Codec.Record (codecOptional, codecRecord)
 import Data.Json.Decode (JsonDecodeError(..), printJsonDecodeError, runDecodeFromString)
 import Data.Json.Encode (runEncodeToString)
 import Effect.Aff (Aff)
@@ -21,7 +21,20 @@ import Node.FS.Aff (readTextFile) as FS
 import Node.Path (FilePath)
 
 -- | One package as the manifest says it, in place of what `spago ls packages` says.
-type ManifestPackage = { name :: String, path :: FilePath, dependencies :: Array String }
+type ManifestPackage =
+  { name :: String
+  , path :: FilePath
+  , dependencies :: Array String
+  , testDependencies :: Array String
+  }
+
+-- | One package as the file spells it; an older manifest has no `testDependencies`, read as none.
+type ManifestPackageWritten =
+  { name :: String
+  , path :: FilePath
+  , dependencies :: Array String
+  , testDependencies :: Maybe (Array String)
+  }
 
 -- | One module as another package sees it: its name, where it is, and its header text.
 type InterfaceModule = { moduleName :: String, path :: FilePath, kind :: ModuleKind, header :: String }
@@ -56,11 +69,18 @@ codecManifest = codecRecord
   }
 
 codecManifestPackage :: JsonCodec ManifestPackage
-codecManifestPackage = codecRecord
-  { name: codecString
-  , path: codecString
-  , dependencies: codecArray codecString
-  }
+codecManifestPackage = codecInvmap
+  ( \(written :: ManifestPackageWritten) ->
+      written { testDependencies = fold written.testDependencies }
+  )
+  (\(held :: ManifestPackage) -> held { testDependencies = Just held.testDependencies })
+  ( codecRecord
+      { name: codecString
+      , path: codecString
+      , dependencies: codecArray codecString
+      , testDependencies: codecOptional (codecArray codecString)
+      }
+  )
 
 codecInterface :: JsonCodec Interface
 codecInterface = codecRecord
