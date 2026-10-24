@@ -682,3 +682,97 @@ exemptions:
       29 findings in 9 modules on 2026-10-19, when doc-comment-noun-phrase
       began refusing a doc comment that opens with a question word or `Returns`. Not a
       decision: name the thing, as a noun phrase, and delete this line.
+  - rule: mixed-operators
+    modules:
+      - Lint
+      - Lint.Internal.Exemptions
+    kind: backlog
+    since: "2026-10-24"
+    why: >-
+      moved to default 2026-10-24; not fixed outside endpoint
+  - rule: no-buried-constant
+    modules:
+      - Lint
+    kind: backlog
+    since: "2026-10-24"
+    why: >-
+      moved to default 2026-10-24; not fixed outside endpoint
+  - rule: no-multiline-lambda-field
+    modules:
+      - Test.Lint.FixSpec
+      - Test.Lint.ReadmeExample
+    kind: backlog
+    since: "2026-10-24"
+    why: >-
+      moved to default 2026-10-24; not fixed outside endpoint
+  - rule: no-qualified-import-list
+    modules:
+      - Lint
+      - Lint.Fix
+      - Lint.Internal.Dedent
+      - Lint.Internal.Exemptions
+      - Lint.Internal.Interface
+      - Lint.Internal.Rule
+      - Lint.Internal.RuleSet
+      - Lint.Internal.Spago
+      - Lint.Internal.Survey
+      - Lint.Internal.Workspace
+      - Lint.RuleSet.Do
+      - Test.Lint.ExemptionsSpec
+      - Test.Lint.Fixture
+      - Test.Lint.InstanceMembersSpec
+      - Test.Lint.Internal.RuleSetSpec
+      - Test.Lint.Internal.RuleSpec
+      - Test.Lint.Internal.WorkspaceSpec
+      - Test.Lint.PackagesSpec
+      - Test.Lint.ReadmeExample
+      - Test.Lint.ReadmeExampleSpec
+    kind: backlog
+    since: "2026-10-24"
+    why: >-
+      moved to default 2026-10-24; not fixed outside endpoint
+  - rule: no-record-type-annotation
+    modules:
+      - Lint.Internal.Exemptions
+    kind: backlog
+    since: "2026-10-24"
+    why: >-
+      moved to default 2026-10-24; not fixed outside endpoint
+  - rule: no-show-outside-tests
+    modules:
+      - Lint
+      - Lint.Internal.Workspace
+    kind: backlog
+    since: "2026-10-24"
+    why: >-
+      moved to default 2026-10-24; not fixed outside endpoint
+  - rule: one-let-per-binding
+    modules:
+      - Lint
+      - Test.Lint.ExemptionsSpec
+      - Test.Lint.Internal.RuleSetSpec
+    kind: backlog
+    since: "2026-10-24"
+    why: >-
+      moved to default 2026-10-24; not fixed outside endpoint
+  - rule: one-line-import
+    modules:
+      - Lint
+      - Lint.Internal.Exemptions
+      - Lint.Internal.Spago
+      - Test.Lint.InstanceMembersSpec
+      - Test.Lint.Internal.RuleSetSpec
+      - Test.Lint.Internal.RuleSpec
+      - Test.Lint.PackagesSpec
+      - Test.Lint.ReadmeExample
+    kind: backlog
+    since: "2026-10-24"
+    why: >-
+      moved to default 2026-10-24; not fixed outside endpoint
+  - rule: spec-matches-subject
+    modules:
+      - Test.Lint.PackagesSpec
+    kind: backlog
+    since: "2026-10-24"
+    why: >-
+      moved to default 2026-10-24; not fixed outside endpoint
