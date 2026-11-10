@@ -776,3 +776,17 @@ exemptions:
     since: "2026-10-24"
     why: >-
       moved to default 2026-10-24; not fixed outside endpoint
+  - rule: no-bare-runtime
+    modules:
+      - Lint
+      - Lint.Internal.Exemptions
+      - Lint.Internal.Interface
+      - Lint.Internal.Spago
+      - Lint.Internal.Workspace
+    kind: backlog
+    since: "2026-11-10"
+    why: >-
+      The linter's runner, written before the house runtimes: `runLinter`, `lintWorkspace`, the
+      workspace and interface readers all answer bare `Aff` and fail by throwing. Moving them to
+      `AffEV` means naming each failure as a row, through the regulator and libs-lint, so it is
+      its own pull request.
