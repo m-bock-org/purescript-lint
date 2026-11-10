@@ -25,7 +25,7 @@ import Effect.Aff (error, throwError) as Aff
 import Effect.Class (liftEffect)
 import Foreign.Object as Obj
 import Node.Buffer as Buffer
-import Node.ChildProcess (execSync)
+import Node.ChildProcess (execSync')
 import Node.Encoding (Encoding(..))
 
 -- | A package this repo owns, as spago reports it. `dependencies` is
@@ -52,10 +52,10 @@ spagoLsPackages = do
     Left err -> Aff.throwError
       (Aff.error ("spago ls packages --json: " <> printJsonDecodeError err))
 
--- | Private.
+-- | Private. Spago's stderr is captured, not shown; see Context.
 runSpagoLsPackages :: Aff String
 runSpagoLsPackages = liftEffect do
-  buf <- execSync "spago ls packages --json"
+  buf <- execSync' "spago ls packages --json" identity
   Buffer.toString UTF8 buf
 
 -- | Private. Used only by `spagoLsPackages`. Uses `dependenciesOr`.
@@ -119,3 +119,13 @@ testDependenciesOr
   -> Array String
 testDependenciesOr =
   Either.either (const []) (_.value >>> _.package >>> _.test >>> _.dependencies)
+
+-- ## Context
+--
+-- `runSpagoLsPackages` captures spago's stderr. On it, spago 1.0 prints
+-- "Selecting 74 packages to build:" and every name in the workspace
+-- while it only resolves the workspace and compiles nothing; shown,
+-- that read as a lint building every package, and an agent holding to
+-- "a check touches only what changed" stopped there. `execSync` hands
+-- the child's stderr to the terminal; `execSync'` pipes it, and Node
+-- still puts it in the error's message when spago fails.
